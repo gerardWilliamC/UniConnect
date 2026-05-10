@@ -63,9 +63,9 @@ namespace UniConnect.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap L1___Dark_Mode {
+        internal static System.Drawing.Bitmap l1dm {
             get {
-                object obj = ResourceManager.GetObject("L1 - Dark Mode", resourceCulture);
+                object obj = ResourceManager.GetObject("l1dm", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -73,9 +73,9 @@ namespace UniConnect.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap L1___Light_Mode {
+        internal static System.Drawing.Bitmap l1lm {
             get {
-                object obj = ResourceManager.GetObject("L1 - Light Mode", resourceCulture);
+                object obj = ResourceManager.GetObject("l1lm", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -83,9 +83,9 @@ namespace UniConnect.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap L2___Dark_Mode {
+        internal static System.Drawing.Bitmap l2dm {
             get {
-                object obj = ResourceManager.GetObject("L2 - Dark Mode", resourceCulture);
+                object obj = ResourceManager.GetObject("l2dm", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -93,9 +93,9 @@ namespace UniConnect.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap L2___Light_Mode {
+        internal static System.Drawing.Bitmap l2lm {
             get {
-                object obj = ResourceManager.GetObject("L2 - Light Mode", resourceCulture);
+                object obj = ResourceManager.GetObject("l2lm", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

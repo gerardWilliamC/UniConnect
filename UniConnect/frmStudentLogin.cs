@@ -15,14 +15,7 @@ namespace UniConnect
 
         private void LoadLogo()
         {
-            try
-            {
-                string logoPath = Path.Combine(
-                    AppDomain.CurrentDomain.BaseDirectory, "Resources", "logo.png");
-                if (File.Exists(logoPath))
-                    pbLogo.Image = Image.FromFile(logoPath);
-            }
-            catch { /* fall back to empty PictureBox if load fails */ }
+            pbLogo.Image = Properties.Resources.l2dm;
         }
 
         private void btnStudentLogin_Click(object sender, EventArgs e)
@@ -42,6 +35,13 @@ namespace UniConnect
 
             frmStudentDashboard dashboard = new frmStudentDashboard();
             dashboard.Show();
+            this.Hide();
+        }
+
+        private void btnAdminLogin_Click(object sender, EventArgs e)
+        {
+            frmAdminLogin adminLogin = new frmAdminLogin();
+            adminLogin.Show();
             this.Hide();
         }
 

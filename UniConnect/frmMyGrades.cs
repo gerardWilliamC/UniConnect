@@ -22,21 +22,8 @@ namespace UniConnect
 
         private void LoadLogo()
         {
-            try
-            {
-                string logoPath = Path.Combine(
-                    AppDomain.CurrentDomain.BaseDirectory, "Resources", "L1 - Light Mode.png");
-                if (File.Exists(logoPath))
-                {
-                    pbSidebarLogo.Image = Image.FromFile(logoPath);
-                    pbWatermark.Image = Image.FromFile(logoPath);
-                }
-                // Force the watermark to inherit the lavender main background
-                pbWatermark.BackColor = System.Drawing.Color.FromArgb(245, 243, 248);
-                pbWatermark.Parent = pnlMain;
-                pbWatermark.BringToFront();
-            }
-            catch { }
+            pbSidebarLogo.Image = Properties.Resources.l2lm;
+            pbWatermark.Image = Properties.Resources.l1lm;
         }
 
         private void StyleGradesGrid()

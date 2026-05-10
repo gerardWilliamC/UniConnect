@@ -23,32 +23,8 @@ namespace UniConnect
 
         private void LoadLogo()
         {
-            try
-            {
-                string logoPath = Path.Combine(
-                    AppDomain.CurrentDomain.BaseDirectory, "Resources", "L1 - Light Mode.png");
-
-                if (File.Exists(logoPath))
-                {
-                    pbSidebarLogo.Image = Image.FromFile(logoPath);
-                    pbWatermark.Image = Image.FromFile(logoPath);
-                    pbWatermark.BringToFront();
-                }
-                else
-                {
-                    // Helpful for debugging — tells you exactly where it expected the file
-                    MessageBox.Show(
-                        $"Logo file not found at:\n{logoPath}\n\n" +
-                        "Make sure 'logo.png' is in the project's Resources folder " +
-                        "and its 'Copy to Output Directory' property is set to 'Copy if newer'.",
-                        "Logo not loaded", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error loading logo: " + ex.Message,
-                    "Logo Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            pbSidebarLogo.Image = Properties.Resources.l2lm;
+            pbWatermark.Image = Properties.Resources.l1lm;
         }
 
         private void StyleGradesGrid()

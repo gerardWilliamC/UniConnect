@@ -21,17 +21,8 @@ namespace UniConnect
 
         private void LoadLogo()
         {
-            try
-            {
-                string logoPath = Path.Combine(
-                    AppDomain.CurrentDomain.BaseDirectory, "Resources", "L1 - Light Mode.png");
-                if (File.Exists(logoPath))
-                {
-                    pbSidebarLogo.Image = Image.FromFile(logoPath);
-                    pbWatermark.Image = Image.FromFile(logoPath);
-                }
-            }
-            catch { }
+            pbSidebarLogo.Image = Properties.Resources.l2lm;
+            pbWatermark.Image = Properties.Resources.l1lm;
         }
 
         private void LoadAnnouncements()
