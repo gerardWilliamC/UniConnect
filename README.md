@@ -11,7 +11,7 @@ A C# WinForms desktop student portal built for LPU (Lyceum of the Philippines Un
 
 ## Project Structure
 
-```
+```text
 UniConnect/
 ├── Models/                 POCO data classes
 │   ├── Student.cs
@@ -27,82 +27,116 @@ UniConnect/
 │   ├── 01_create_database.sql
 │   ├── 02_create_tables.sql
 │   ├── 03_seed_data.sql
-│   └── 04_announcement_reads.sql
 ├── Properties/
 ├── Resources/              Logos
 ├── App.config              Connection string config
 └── frm*.cs                 8 form files (Login, Dashboard, etc.)
-```
 
-## Setup
+Setup
 
-### 1. Install prerequisites
+To get this project running on your local machine, you need the "engine" to run the database and the "steering wheel" to manage it.
+1. Install prerequisites
 
-- **Visual Studio 2022** (Community is fine) with .NET Desktop Development workload
-- **MS SQL Server 2022 Express** — [Download here](https://www.microsoft.com/en-us/sql-server/sql-server-downloads)
-- **SQL Server Management Studio (SSMS)** — [Download here](https://learn.microsoft.com/en-us/sql/ssms/download-sql-server-management-studio-ssms)
+    Visual Studio 2026 (Community is fine) with the .NET Desktop Development workload.
 
-### 2. Set up the database
+    MS SQL Server Express (The Engine):
 
-1. Open **SSMS** and connect to your local SQL Server (usually `localhost\SQLEXPRESS`)
-2. Run the scripts in `/DatabaseScripts/` **in this exact order**:
-   - `01_create_database.sql`
-   - `02_create_tables.sql`
-   - `03_seed_data.sql`
-   - `04_announcement_reads.sql`
+        Go to the official Microsoft SQL Server downloads page.
 
-   For each: open in SSMS, press **F5** to execute.
+        Scroll down to the "Free editions" section.
 
-### 3. Configure the connection
+        Under Express, click the Download now button.
 
-Open `App.config` in the project root. By default the connection string is:
+        Run the installer file that downloads (SQL2022-SSEI-Expr.exe or similar).
 
-```
+        Select the Basic installation type, accept the terms, and hit Install.
+
+    SQL Server Management Studio / SSMS (The Steering Wheel):
+
+        When the SQL Server Express installation finishes, click the "Install SSMS" button right on the success screen. (Alternatively, search "Download SSMS" on Google and click the "Free Download for SQL Server Management Studio" link).
+
+        Run the downloaded installer (SSMS-Setup-ENU.exe).
+
+        Click Install and let it run (it may ask you to restart your computer afterward).
+
+2. Set up the local database
+
+    Open SQL Server Management Studio (SSMS) from your Windows Start menu.
+
+    A "Connect to Server" window will pop up. The Server Name should automatically be filled in (usually localhost\SQLEXPRESS or YourComputerName\SQLEXPRESS). Hit Connect.
+
+    Go to File > Open > File... and open the scripts in /DatabaseScripts/. Run them in this exact order by pressing F5 (or clicking Execute at the top) for each one:
+
+        01_create_database.sql
+
+        02_create_tables.sql
+
+        03_seed_data.sql
+
+
+3. Configure the connection
+
+Open App.config in the project root. By default the connection string is:
+XML
+
 Server=localhost\SQLEXPRESS;Database=UniConnectDB;Integrated Security=True;TrustServerCertificate=True;
-```
 
-If your SQL Server uses a different instance name (e.g., `YOUR-PC\SQLEXPRESS`), edit the `Server=` portion. **Do not edit any C# source files for this.**
+If your local SQL Server uses a different instance name (e.g., YOUR-PC\SQLEXPRESS), edit the Server= portion. Do not edit any C# source files to change the connection string.
+4. Build and run
 
-### 4. Build and run
+    Open UniConnect.sln in Visual Studio.
 
-1. Open `UniConnect.sln` in Visual Studio
-2. Restore NuGet packages (Visual Studio usually prompts automatically)
-3. Press **F5** to run
+    Restore NuGet packages (Visual Studio usually prompts automatically).
 
-## Default Test Credentials
+    Press F5 to run the application.
 
-### Student
-- Email: `juan.delacruz@lpu.edu.ph`
-- Password: `student123`
 
-(Other student emails: `maria.clara@lpu.edu.ph`, `padre.damaso@lpu.edu.ph`, etc.)
+Default Test Credentials
+Student
 
-### Admin
-- Email: `admin@lpu.edu.ph` (Juan Santos, ICT Admin)
-- Password: `admin123`
+    Email: juan.delacruz@lpu.edu.ph
 
-(Other admin emails: `registrar@lpu.edu.ph`, `encoder@lpu.edu.ph`)
+    Password: student123
 
-## Features
+(Other student emails: maria.clara@lpu.edu.ph, padre.damaso@lpu.edu.ph, etc.)
+Admin
 
-### Student-side
-- Login with database validation
-- Dashboard: GWA, enrolled units, year level, recent grades preview, latest announcements
-- My Grades: full grade history with semester tabs (newest first), color-coded status, CSV export
-- Announcements: full list with expand-on-click, read tracking, color-coded audience badges, search
+    Email: admin@lpu.edu.ph (Juan Santos, ICT Admin)
 
-### Admin-side
-- Login with database validation
-- Admin Dashboard: total students / courses / pending grades / announcement counts, recent grade entries table, recent audit logs sidebar
-- Encode Grades: search students, edit grades, transactional save with automatic audit logging
-- Post Announcement: create + archive announcements (transactional), live posted-announcements panel, search
+    Password: admin123
 
-### Cross-cutting
-- All write operations use SQL transactions (atomic update + audit log)
-- All queries are parameterized (SQL injection-safe)
-- Soft delete for announcements (`is_archived` flag preserves audit trail)
-- Foreign key constraints enforce referential integrity
+(Other admin emails: registrar@lpu.edu.ph, encoder@lpu.edu.ph)
+Features
+Student-side
 
-## Team
+    Login with database validation
+
+    Dashboard: GWA, enrolled units, year level, recent grades preview, latest announcements
+
+    My Grades: full grade history with semester tabs (newest first), color-coded status, CSV export
+
+    Announcements: full list with expand-on-click, read tracking, color-coded audience badges, search
+
+Admin-side
+
+    Login with database validation
+
+    Admin Dashboard: total students / courses / pending grades / announcement counts, recent grade entries table, recent audit logs sidebar
+
+    Encode Grades: search students, edit grades, transactional save with automatic audit logging
+
+    Post Announcement: create + archive announcements (transactional), live posted-announcements panel, search
+
+Cross-cutting
+
+    All write operations use SQL transactions (atomic update + audit log)
+
+    All queries are parameterized (SQL injection-safe)
+
+    Soft delete for announcements (is_archived flag preserves audit trail)
+
+    Foreign key constraints enforce referential integrity
+
+Team
 
 Project group of 5, LPU-C.
