@@ -438,5 +438,457 @@ namespace UniConnect.Database
                 }
             }
         }
+
+        // =====================================================================
+        // ADMIN DASHBOARD QUERIES
+        // =====================================================================
+
+        /// <summary>
+        /// Returns the 4 top-line counts the admin dashboard shows:
+        /// total students, total subjects, pending grades, non-archived announcements.
+        /// All four pulled in one round-trip via UNION ALL.
+        /// </summary>
+        public (int totalStudents, int totalCourses, int pendingGrades, int announcements)
+            GetAdminDashboardCounts()
+        {
+            string sql = @"
+        SELECT
+            (SELECT COUNT(*) FROM students)                                   AS total_students,
+            (SELECT COUNT(*) FROM subjects)                                   AS total_courses,
+            (SELECT COUNT(*) FROM grades
+                WHERE grade IS NULL OR status = 'Pending')                    AS pending_grades,
+            (SELECT COUNT(*) FROM announcements WHERE is_archived = 0)        AS announcement_count";
+
+            using (SqlConnection conn = GetConnection())
+            {
+                conn.Open();
+                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        return (
+                            Convert.ToInt32(reader["total_students"]),
+                            Convert.ToInt32(reader["total_courses"]),
+                            Convert.ToInt32(reader["pending_grades"]),
+                            Convert.ToInt32(reader["announcement_count"])
+                        );
+                    }
+                }
+            }
+            return (0, 0, 0, 0);
+        }
+
+        /// <summary>
+        /// Recent grade entries for the admin dashboard preview.
+        /// Joins grades → students (for name) → subjects (for code/name) → admins (for editor name).
+        /// </summary>
+        public List<(string studentName, string studentId, string subjectCode,
+                     string subjectName, decimal? grade, string status,
+                     string editedBy, DateTime updatedAt)>
+            GetRecentGradeEntries(int limit = 10)
+        {
+            string sql = @"
+        SELECT TOP (@Limit)
+               st.full_name        AS student_name,
+               g.student_id,
+               g.subject_code,
+               s.subject_name,
+               g.grade,
+               g.status,
+               ISNULL(ad.full_name, g.updated_by) AS edited_by,
+               g.updated_at
+        FROM grades g
+        INNER JOIN students st ON g.student_id = st.student_id
+        INNER JOIN subjects s  ON g.subject_code = s.subject_code
+        LEFT JOIN  admins   ad ON g.updated_by  = ad.admin_id
+        ORDER BY g.updated_at DESC";
+
+            var rows = new List<(string, string, string, string, decimal?, string, string, DateTime)>();
+
+            using (SqlConnection conn = GetConnection())
+            {
+                conn.Open();
+                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Limit", limit);
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            rows.Add((
+                                reader["student_name"].ToString(),
+                                reader["student_id"].ToString(),
+                                reader["subject_code"].ToString(),
+                                reader["subject_name"].ToString(),
+                                reader["grade"] == DBNull.Value ? (decimal?)null : Convert.ToDecimal(reader["grade"]),
+                                reader["status"]?.ToString() ?? "",
+                                reader["edited_by"]?.ToString() ?? "",
+                                Convert.ToDateTime(reader["updated_at"])
+                            ));
+                        }
+                    }
+                }
+            }
+            return rows;
+        }
+
+        /// <summary>
+        /// Recent audit log entries for the admin dashboard.
+        /// Joins to admins to resolve performed_by → human-readable name.
+        /// </summary>
+        public List<AuditLog> GetRecentAuditLogs(int limit = 8)
+        {
+            string sql = @"
+        SELECT TOP (@Limit)
+               al.log_id, al.action_type, al.table_affected,
+               al.performed_by,
+               ISNULL(ad.full_name, al.performed_by) AS performed_by_name,
+               al.details, al.timestamp
+        FROM audit_logs al
+        LEFT JOIN admins ad ON al.performed_by = ad.admin_id
+        ORDER BY al.timestamp DESC";
+
+            var list = new List<AuditLog>();
+
+            using (SqlConnection conn = GetConnection())
+            {
+                conn.Open();
+                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Limit", limit);
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            list.Add(new AuditLog
+                            {
+                                LogId = Convert.ToInt32(reader["log_id"]),
+                                ActionType = reader["action_type"]?.ToString(),
+                                TableAffected = reader["table_affected"]?.ToString(),
+                                PerformedBy = reader["performed_by"]?.ToString(),
+                                PerformedByName = reader["performed_by_name"]?.ToString(),
+                                Details = reader["details"]?.ToString(),
+                                Timestamp = Convert.ToDateTime(reader["timestamp"])
+                            });
+                        }
+                    }
+                }
+            }
+            return list;
+        }
+
+        // =====================================================================
+        // ENCODE GRADES — student lookup + grade update with audit
+        // =====================================================================
+
+        /// <summary>
+        /// Finds a student by ID or partial name match. Returns null if not found.
+        /// Used by the encoder's search box.
+        /// </summary>
+        public Student FindStudent(string query)
+        {
+            string sql = @"
+        SELECT TOP 1 student_id, full_name, email, program, year_level, semester
+        FROM students
+        WHERE student_id = @Query
+           OR full_name LIKE @Like
+        ORDER BY student_id";
+
+            using (SqlConnection conn = GetConnection())
+            {
+                conn.Open();
+                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Query", query);
+                    cmd.Parameters.AddWithValue("@Like", "%" + query + "%");
+
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            return new Student
+                            {
+                                StudentId = reader["student_id"].ToString(),
+                                FullName = reader["full_name"].ToString(),
+                                Email = reader["email"].ToString(),
+                                Program = reader["program"]?.ToString(),
+                                YearLevel = reader["year_level"] == DBNull.Value ? 0 : Convert.ToInt32(reader["year_level"]),
+                                Semester = reader["semester"]?.ToString()
+                            };
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Updates a grade row AND inserts an audit log entry in a single transaction.
+        /// Either both succeed or both roll back — no orphan logs, no silent grade changes.
+        /// </summary>
+        public void UpdateGradeWithAudit(
+            string studentId,
+            string subjectCode,
+            decimal? newGrade,
+            string newStatus,
+            string semester,
+            string adminId,
+            string detailsForLog)
+        {
+            using (SqlConnection conn = GetConnection())
+            {
+                conn.Open();
+
+                using (SqlTransaction tx = conn.BeginTransaction())
+                {
+                    try
+                    {
+                        // 1) Update the grade row
+                        string updateSql = @"
+                    UPDATE grades
+                    SET grade      = @Grade,
+                        status     = @Status,
+                        updated_by = @AdminId,
+                        updated_at = GETDATE()
+                    WHERE student_id   = @StudentId
+                      AND subject_code = @SubjectCode
+                      AND semester     = @Semester";
+
+                        using (SqlCommand cmd = new SqlCommand(updateSql, conn, tx))
+                        {
+                            cmd.Parameters.AddWithValue("@Grade",
+                                (object)newGrade ?? DBNull.Value);
+                            cmd.Parameters.AddWithValue("@Status", newStatus);
+                            cmd.Parameters.AddWithValue("@AdminId", adminId);
+                            cmd.Parameters.AddWithValue("@StudentId", studentId);
+                            cmd.Parameters.AddWithValue("@SubjectCode", subjectCode);
+                            cmd.Parameters.AddWithValue("@Semester", semester);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        // 2) Insert the audit log entry
+                        string auditSql = @"
+                    INSERT INTO audit_logs (action_type, table_affected, performed_by, details)
+                    VALUES (@Action, 'grades', @AdminId, @Details)";
+
+                        using (SqlCommand cmd = new SqlCommand(auditSql, conn, tx))
+                        {
+                            cmd.Parameters.AddWithValue("@Action", "Grade Updated");
+                            cmd.Parameters.AddWithValue("@AdminId", adminId);
+                            cmd.Parameters.AddWithValue("@Details", detailsForLog);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        // 3) Both succeeded → commit
+                        tx.Commit();
+                    }
+                    catch
+                    {
+                        // Roll back BOTH operations on any failure
+                        tx.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Recent audit logs for grade-related actions only.
+        /// Used by the encoder's "Recent Changes" sidebar.
+        /// </summary>
+        public List<AuditLog> GetRecentGradeAuditLogs(int limit = 8)
+        {
+            string sql = @"
+        SELECT TOP (@Limit)
+               al.log_id, al.action_type, al.table_affected,
+               al.performed_by,
+               ISNULL(ad.full_name, al.performed_by) AS performed_by_name,
+               al.details, al.timestamp
+        FROM audit_logs al
+        LEFT JOIN admins ad ON al.performed_by = ad.admin_id
+        WHERE al.action_type LIKE 'Grade%'
+        ORDER BY al.timestamp DESC";
+
+            var list = new List<AuditLog>();
+
+            using (SqlConnection conn = GetConnection())
+            {
+                conn.Open();
+                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Limit", limit);
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            list.Add(new AuditLog
+                            {
+                                LogId = Convert.ToInt32(reader["log_id"]),
+                                ActionType = reader["action_type"]?.ToString(),
+                                TableAffected = reader["table_affected"]?.ToString(),
+                                PerformedBy = reader["performed_by"]?.ToString(),
+                                PerformedByName = reader["performed_by_name"]?.ToString(),
+                                Details = reader["details"]?.ToString(),
+                                Timestamp = Convert.ToDateTime(reader["timestamp"])
+                            });
+                        }
+                    }
+                }
+            }
+            return list;
+        }
+
+        // =====================================================================
+        // POST ANNOUNCEMENT — insert + audit + archive
+        // =====================================================================
+
+        /// <summary>
+        /// Inserts a new announcement AND a matching audit_log row in one transaction.
+        /// Returns the new announcement_id on success.
+        /// </summary>
+        public int PostAnnouncementWithAudit(
+            string title,
+            string content,
+            string targetAudience,
+            string adminId)
+        {
+            using (SqlConnection conn = GetConnection())
+            {
+                conn.Open();
+                using (SqlTransaction tx = conn.BeginTransaction())
+                {
+                    try
+                    {
+                        // 1) Insert announcement, capture the new ID
+                        string insertSql = @"
+                    INSERT INTO announcements (title, content, target_audience, posted_by)
+                    OUTPUT INSERTED.announcement_id
+                    VALUES (@Title, @Content, @Audience, @AdminId)";
+
+                        int newId;
+                        using (SqlCommand cmd = new SqlCommand(insertSql, conn, tx))
+                        {
+                            cmd.Parameters.AddWithValue("@Title", title);
+                            cmd.Parameters.AddWithValue("@Content", content);
+                            cmd.Parameters.AddWithValue("@Audience", targetAudience);
+                            cmd.Parameters.AddWithValue("@AdminId", adminId);
+                            newId = Convert.ToInt32(cmd.ExecuteScalar());
+                        }
+
+                        // 2) Insert audit log
+                        string auditSql = @"
+                    INSERT INTO audit_logs (action_type, table_affected, performed_by, details)
+                    VALUES ('Announcement Posted', 'announcements', @AdminId, @Details)";
+
+                        using (SqlCommand cmd = new SqlCommand(auditSql, conn, tx))
+                        {
+                            cmd.Parameters.AddWithValue("@AdminId", adminId);
+                            cmd.Parameters.AddWithValue("@Details", "Posted: " + title);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        tx.Commit();
+                        return newId;
+                    }
+                    catch
+                    {
+                        tx.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Sets is_archived = 1 on an announcement (soft-delete) AND logs the action.
+        /// </summary>
+        public void ArchiveAnnouncementWithAudit(int announcementId, string adminId, string title)
+        {
+            using (SqlConnection conn = GetConnection())
+            {
+                conn.Open();
+                using (SqlTransaction tx = conn.BeginTransaction())
+                {
+                    try
+                    {
+                        string updateSql = @"
+                    UPDATE announcements
+                    SET is_archived = 1
+                    WHERE announcement_id = @Id";
+
+                        using (SqlCommand cmd = new SqlCommand(updateSql, conn, tx))
+                        {
+                            cmd.Parameters.AddWithValue("@Id", announcementId);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        string auditSql = @"
+                    INSERT INTO audit_logs (action_type, table_affected, performed_by, details)
+                    VALUES ('Announcement Archived', 'announcements', @AdminId, @Details)";
+
+                        using (SqlCommand cmd = new SqlCommand(auditSql, conn, tx))
+                        {
+                            cmd.Parameters.AddWithValue("@AdminId", adminId);
+                            cmd.Parameters.AddWithValue("@Details", "Archived: " + title);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        tx.Commit();
+                    }
+                    catch
+                    {
+                        tx.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Returns ALL announcements (including archived) — for the admin's "Posted Announcements" panel.
+        /// Includes the posted_by_name and is_archived state.
+        /// </summary>
+        public List<Announcement> GetAllAnnouncementsForAdmin(int limit = 50)
+        {
+            string sql = @"
+        SELECT TOP (@Limit)
+               a.announcement_id, a.title, a.content, a.target_audience,
+               a.posted_by, ad.full_name AS posted_by_name,
+               a.posted_at, a.is_archived
+        FROM announcements a
+        LEFT JOIN admins ad ON a.posted_by = ad.admin_id
+        ORDER BY a.posted_at DESC";
+
+            var list = new List<Announcement>();
+
+            using (SqlConnection conn = GetConnection())
+            {
+                conn.Open();
+                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Limit", limit);
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            list.Add(new Announcement
+                            {
+                                AnnouncementId = Convert.ToInt32(reader["announcement_id"]),
+                                Title = reader["title"].ToString(),
+                                Content = reader["content"].ToString(),
+                                TargetAudience = reader["target_audience"].ToString(),
+                                PostedBy = reader["posted_by"]?.ToString(),
+                                PostedByName = reader["posted_by_name"]?.ToString(),
+                                PostedAt = Convert.ToDateTime(reader["posted_at"]),
+                                IsArchived = Convert.ToBoolean(reader["is_archived"])
+                            });
+                        }
+                    }
+                }
+            }
+            return list;
+        }
+
     }
 }

@@ -429,7 +429,6 @@
             this.dgvGrades.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
             this.dgvGrades.Size = new System.Drawing.Size(675, 455);
             this.dgvGrades.TabIndex = 0;
-            this.dgvGrades.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dgvGrades_CellContentClick);
             // 
             // pnlRecentChanges
             // 
