@@ -3,6 +3,39 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+
+# ===== Build outputs =====
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# ===== Visual Studio settings =====
+.vs/
+*.pdb
+
+# ===== NuGet =====
+packages/
+*.nupkg
+*.snupkg
+.nuget/
+
+# ===== ReSharper / Rider =====
+_ReSharper*/
+*.DotSettings.user
+
+# ===== OS junk =====
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# ===== Local config / secrets =====
+appsettings.Development.json
+*.local.config
+
+
 # User-specific files
 *.rsuser
 *.suo

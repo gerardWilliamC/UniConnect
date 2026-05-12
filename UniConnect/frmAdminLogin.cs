@@ -2,6 +2,8 @@
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
+using UniConnect.Database;
+using UniConnect.Models;
 
 namespace UniConnect
 {
@@ -31,17 +33,41 @@ namespace UniConnect
 
         private void btnAdminLogin_Click(object sender, EventArgs e)
         {
-            string adminId = txtAdminId.Text.Trim();
+            string email = txtAdminId.Text.Trim();
             string password = txtPassword.Text;
 
-            if (string.IsNullOrWhiteSpace(adminId) || string.IsNullOrWhiteSpace(password))
+            if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
             {
                 MessageBox.Show("Please enter both your admin ID/email and password.",
                     "Missing Information", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            // TODO: validate against MySQL admins table later
+            DatabaseHelper db = new DatabaseHelper();
+            Admin admin;
+
+            try
+            {
+                admin = db.ValidateAdmin(email, password);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Could not connect to the database.\n\n" + ex.Message,
+                    "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            if (admin == null)
+            {
+                MessageBox.Show("Invalid credentials, or you are not authorized to access this portal.",
+                    "Login Failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtPassword.Text = "";
+                txtPassword.Focus();
+                return;
+            }
+
+            Session.CurrentAdmin = admin;
+
             frmAdminDashboard adminDash = new frmAdminDashboard();
             adminDash.Show();
             this.Hide();

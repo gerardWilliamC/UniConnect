@@ -2,6 +2,9 @@
 using System.IO;
 using System.Drawing;
 using System.Windows.Forms;
+using UniConnect.Database;
+using UniConnect.Database;
+using UniConnect.Models;
 
 namespace UniConnect
 {
@@ -30,8 +33,31 @@ namespace UniConnect
                 return;
             }
 
-            // TODO: validate against MySQL students table later
-            // For now, any non-empty input gets you in
+            DatabaseHelper db = new DatabaseHelper();
+            Student student;
+
+            try
+            {
+                student = db.ValidateStudent(email, password);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Could not connect to the database.\n\n" + ex.Message,
+                    "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            if (student == null)
+            {
+                MessageBox.Show("Invalid email or password. Please try again.",
+                    "Login Failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtPassword.Text = "";
+                txtPassword.Focus();
+                return;
+            }
+
+            // Successful login — save to session and open the dashboard
+            Session.CurrentStudent = student;
 
             frmStudentDashboard dashboard = new frmStudentDashboard();
             dashboard.Show();

@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
-using System.IO;
 using System.Windows.Forms;
+using UniConnect.Database;
+using UniConnect.Models;
 
 namespace UniConnect
 {
@@ -15,10 +17,79 @@ namespace UniConnect
         private void frmStudentDashboard_Load(object sender, EventArgs e)
         {
             LoadLogo();
-            StyleGradesGrid();
-            LoadGrades();          // empty for now
-            LoadAnnouncements();   // empty for now
-            ResetStatCards();      // show dashes when no data
+
+            // If somehow no one is logged in, kick back to login
+            if (Session.CurrentStudent == null)
+            {
+                MessageBox.Show("Session expired. Please log in again.",
+                    "Not signed in", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                new frmStudentLogin().Show();
+                this.Close();
+                return;
+            }
+
+            Student me = Session.CurrentStudent;
+            DatabaseHelper db = new DatabaseHelper();
+
+            try
+            {
+                // Sidebar — student name and ID
+                lblUserName.Text = me.FullName;
+                lblUserId.Text = me.StudentId;
+
+                // Top bar — semester pill
+                lblSemPill.Text = me.Semester;
+
+                // GWA stat card
+                decimal? gwa = db.GetStudentGWA(me.StudentId, me.Semester);
+                if (gwa.HasValue)
+                {
+                    lblGwaValue.Text = gwa.Value.ToString("0.00");
+                    lblGwaSub.Text = "This semester";
+                }
+                else
+                {
+                    lblGwaValue.Text = "—";
+                    lblGwaSub.Text = "No grades yet";
+                }
+
+                // Enrolled Units stat card
+                int units = db.GetEnrolledUnits(me.StudentId, me.Semester);
+                if (units > 0)
+                {
+                    lblUnitsValue.Text = units.ToString();
+                    lblUnitsSub.Text = "This semester";
+                }
+                else
+                {
+                    lblUnitsValue.Text = "—";
+                    lblUnitsSub.Text = "Not enrolled";
+                }
+
+                // Year Level stat card
+                if (me.YearLevel > 0)
+                {
+                    lblYearValue.Text = me.YearLevel.ToString();
+                    lblYearSub.Text = me.Program ?? "";
+                }
+                else
+                {
+                    lblYearValue.Text = "—";
+                    lblYearSub.Text = "No data yet";
+                }
+
+                // Grades preview (top 5)
+                StyleGradesPreviewGrid();
+                LoadGradesPreview(db, me);
+
+                // Announcements preview
+                LoadAnnouncementsPreview(db);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Could not load dashboard data.\n\n" + ex.Message,
+                    "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void LoadLogo()
@@ -27,19 +98,17 @@ namespace UniConnect
             pbWatermark.Image = Properties.Resources.l1lm;
         }
 
-        private void StyleGradesGrid()
+        private void StyleGradesPreviewGrid()
         {
-            // Header style
             dgvGrades.EnableHeadersVisualStyles = false;
-            dgvGrades.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(139, 21, 56);
+            dgvGrades.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(123, 31, 49);
             dgvGrades.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
             dgvGrades.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             dgvGrades.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
             dgvGrades.ColumnHeadersDefaultCellStyle.Padding = new Padding(8, 0, 0, 0);
-            dgvGrades.ColumnHeadersDefaultCellStyle.SelectionBackColor = Color.FromArgb(139, 21, 56);
+            dgvGrades.ColumnHeadersDefaultCellStyle.SelectionBackColor = Color.FromArgb(123, 31, 49);
             dgvGrades.ColumnHeadersDefaultCellStyle.SelectionForeColor = Color.White;
 
-            // Row style
             dgvGrades.DefaultCellStyle.Font = new Font("Segoe UI", 9F);
             dgvGrades.DefaultCellStyle.ForeColor = Color.FromArgb(33, 33, 33);
             dgvGrades.DefaultCellStyle.SelectionBackColor = Color.FromArgb(252, 232, 237);
@@ -49,88 +118,137 @@ namespace UniConnect
             dgvGrades.RowsDefaultCellStyle.BackColor = Color.White;
             dgvGrades.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(250, 250, 250);
 
-            // Build columns
             dgvGrades.Columns.Clear();
-            dgvGrades.Columns.Add("SubjectCode", "Subject Code");
-            dgvGrades.Columns.Add("SubjectName", "Subject Name");
-            dgvGrades.Columns.Add("Units", "Units");
+            dgvGrades.Columns.Add("SubjectCode", "Code");
+            dgvGrades.Columns.Add("SubjectName", "Subject");
             dgvGrades.Columns.Add("Grade", "Grade");
-            dgvGrades.Columns.Add("Semester", "Semester");
+            dgvGrades.Columns.Add("Status", "Status");
 
-            dgvGrades.Columns["SubjectCode"].Width = 100;
-            dgvGrades.Columns["SubjectName"].Width = 190;
-            dgvGrades.Columns["Units"].Width = 60;
+            dgvGrades.Columns["SubjectCode"].Width = 70;
+            dgvGrades.Columns["SubjectName"].Width = 320;
             dgvGrades.Columns["Grade"].Width = 70;
-            dgvGrades.Columns["Semester"].Width = 100;
+            dgvGrades.Columns["Status"].Width = 90;
         }
 
-        private void LoadGrades()
+        private void LoadGradesPreview(DatabaseHelper db, Student me)
         {
-            // TODO: replace with SQL query later
+            // Remove old empty-state label if any
+            foreach (var c in pnlGrades.Controls.Find("lblEmptyGradesPreview", false))
+                pnlGrades.Controls.Remove(c);
+
             dgvGrades.Rows.Clear();
 
-            if (dgvGrades.Rows.Count == 0)
-                ShowEmptyGradesMessage();
+            List<Grade> grades = db.GetStudentGrades(me.StudentId, me.Semester);
 
-            // Clear any default selection so the blue/highlighted cell goes away
+            // Show only top 5 in dashboard preview
+            int rowsToShow = Math.Min(grades.Count, 5);
+            for (int i = 0; i < rowsToShow; i++)
+            {
+                Grade g = grades[i];
+                string gradeText = g.GradeValue.HasValue ? g.GradeValue.Value.ToString("0.00") : "—";
+                dgvGrades.Rows.Add(g.SubjectCode, g.SubjectName, gradeText, g.Status);
+            }
+
+            if (grades.Count == 0)
+            {
+                dgvGrades.Visible = false;
+                var lbl = new Label
+                {
+                    Name = "lblEmptyGradesPreview",
+                    Text = "No grades available to view",
+                    Font = new Font("Segoe UI", 10F),
+                    ForeColor = Color.FromArgb(160, 160, 160),
+                    Location = dgvGrades.Location,
+                    Size = dgvGrades.Size,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    BackColor = Color.White
+                };
+                pnlGrades.Controls.Add(lbl);
+            }
+            else
+            {
+                dgvGrades.Visible = true;
+            }
+
             dgvGrades.ClearSelection();
             dgvGrades.CurrentCell = null;
         }
 
-        private void ShowEmptyGradesMessage()
+        private void LoadAnnouncementsPreview(DatabaseHelper db)
         {
-            // Hide the grid entirely and show a centered "no data" label inside the panel
-            dgvGrades.Visible = false;
+            // Remove old empty-state label if any
+            foreach (var c in pnlAnnouncements.Controls.Find("lblEmptyAnnouncementsPreview", false))
+                pnlAnnouncements.Controls.Remove(c);
 
-            Label lblEmpty = new Label
-            {
-                Name = "lblEmptyGrades",
-                Text = "No grades available to view",
-                Font = new Font("Segoe UI", 10F, FontStyle.Regular),
-                ForeColor = Color.FromArgb(160, 160, 160),
-                Location = new Point(20, 55),
-                Size = new Size(530, 340),
-                TextAlign = ContentAlignment.MiddleCenter,
-                BackColor = Color.White
-            };
-            pnlGrades.Controls.Add(lblEmpty);
-        }
-
-        private void LoadAnnouncements()
-        {
-            // TODO: replace with SQL query later
             pnlAnnList.Controls.Clear();
 
-            if (pnlAnnList.Controls.Count == 0)
-                ShowEmptyAnnouncementsMessage();
-        }
+            List<Announcement> announcements = db.GetAnnouncements(
+                "Students", limit: 3, studentId: Session.CurrentStudent.StudentId);
 
-        private void ShowEmptyAnnouncementsMessage()
-        {
-            Label lblEmpty = new Label
+            if (announcements.Count == 0)
             {
-                Text = "No recent announcements",
-                Font = new Font("Segoe UI", 10F),
-                ForeColor = Color.FromArgb(160, 160, 160),
-                Location = new Point(0, 0),
-                Size = new Size(255, 160),
-                TextAlign = ContentAlignment.MiddleCenter,
-                BackColor = Color.White
-            };
-            pnlAnnList.Controls.Add(lblEmpty);
-        }
+                var lbl = new Label
+                {
+                    Name = "lblEmptyAnnouncementsPreview",
+                    Text = "No announcements yet",
+                    Font = new Font("Segoe UI", 10F),
+                    ForeColor = Color.FromArgb(160, 160, 160),
+                    Location = new Point(0, 0),
+                    Size = pnlAnnList.Size,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    BackColor = Color.White
+                };
+                pnlAnnList.Controls.Add(lbl);
+                return;
+            }
 
-        private void ResetStatCards()
-        {
-            // Show dashes since there's no data yet
-            lblGwaValue.Text = "—";
-            lblGwaSub.Text = "No data yet";
+            int y = 0;
+            foreach (var a in announcements)
+            {
+                var card = new Panel
+                {
+                    BackColor = Color.White,
+                    Location = new Point(0, y),
+                    Size = new Size(pnlAnnList.Width - 5, 75),
+                    BorderStyle = BorderStyle.None
+                };
 
-            lblUnitsValue.Text = "—";
-            lblUnitsSub.Text = "No data yet";
+                var lblTitle = new Label
+                {
+                    Text = a.Title,
+                    Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                    ForeColor = Color.FromArgb(123, 31, 49),
+                    Location = new Point(5, 4),
+                    Size = new Size(card.Width - 10, 20),
+                    AutoEllipsis = true
+                };
 
-            lblYearValue.Text = "—";
-            lblYearSub.Text = "No data yet";
+                var lblMeta = new Label
+                {
+                    Text = a.PostedAt.ToString("MMM d, yyyy"),
+                    Font = new Font("Segoe UI", 8F),
+                    ForeColor = Color.FromArgb(160, 160, 160),
+                    Location = new Point(5, 26),
+                    Size = new Size(card.Width - 10, 14)
+                };
+
+                var lblBody = new Label
+                {
+                    Text = a.Content,
+                    Font = new Font("Segoe UI", 8.5F),
+                    ForeColor = Color.FromArgb(80, 80, 80),
+                    Location = new Point(5, 44),
+                    Size = new Size(card.Width - 10, 28),
+                    AutoEllipsis = true
+                };
+
+                card.Controls.Add(lblTitle);
+                card.Controls.Add(lblMeta);
+                card.Controls.Add(lblBody);
+                pnlAnnList.Controls.Add(card);
+
+                y += 80;
+            }
         }
 
         // ===== Sidebar nav events =====

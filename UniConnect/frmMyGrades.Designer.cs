@@ -555,7 +555,8 @@
             this.pnlFilterRow.Controls.Add(this.btnSemFilter);
             this.pnlFilterRow.Location = new System.Drawing.Point(30, 220);
             this.pnlFilterRow.Name = "pnlFilterRow";
-            this.pnlFilterRow.Size = new System.Drawing.Size(200, 40);
+            this.pnlFilterRow.Size = new System.Drawing.Size(900, 55);
+            this.pnlFilterRow.AutoScroll = true;
             this.pnlFilterRow.TabIndex = 5;
             // 
             // btnSemFilter
