@@ -27,7 +27,6 @@ UniConnect/
 │   ├── 01_create_database.sql
 │   ├── 02_create_tables.sql
 │   ├── 03_seed_data.sql
-│   └── 04_announcement_reads.sql
 ├── Properties/
 ├── Resources/              Logos
 ├── App.config              Connection string config
