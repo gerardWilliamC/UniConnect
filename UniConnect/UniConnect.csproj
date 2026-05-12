@@ -215,6 +215,9 @@
     <Compile Include="Models\Subject.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="frmStudentDashboard.resx">
+      <DependentUpon>frmStudentDashboard.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="frmStudentLogin.resx">
       <DependentUpon>frmStudentLogin.cs</DependentUpon>
     </EmbeddedResource>
