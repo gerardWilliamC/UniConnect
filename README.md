@@ -1,71 +1,76 @@
 # UniConnect
 
-A C# WinForms desktop student portal built for LPU (Lyceum of the Philippines University) as a final project. Provides separate experiences for students (view grades, announcements, GWA) and administrators (encode grades, post announcements, view audit logs), all backed by MS SQL Server.
+A comprehensive, cross-platform student portal built for LPU (Lyceum of the Philippines University) as a final capstone project. 
+
+UniConnect provides a unified experience across a **C# WinForms Desktop Application** and a **Web Companion Portal**. It offers separate interfaces for students (viewing grades, tracking GWA, reading announcements) and administrators (encoding grades, posting announcements, reviewing audit logs), all synchronized in real-time through a PHP REST API and backed by MS SQL Server.
 
 ## Tech Stack
 
-- **C# WinForms** (.NET) — desktop UI
-- **MS SQL Server Express** — database
-- **ADO.NET** via `Microsoft.Data.SqlClient` — data access layer
-- **OOP architecture** — Models / Database (DAL) / Forms (UI) separation
+**Desktop Application:**
+- **C# WinForms** (.NET Framework) — Desktop UI
+- **ADO.NET** (`Microsoft.Data.SqlClient`) — Direct data access layer
+
+**Web Companion & API:**
+- **PHP 7/8 (PDO)** — Backend RESTful API endpoints
+- **HTML5, CSS3, Vanilla JavaScript** — Responsive web frontend using the Fetch API
+- **XAMPP** — Local web server environment (Apache)
+
+**Database:**
+- **MS SQL Server Express** — Relational database
 
 ## Project Structure
 
 ```text
-UniConnect/
-├── Models/                 POCO data classes
-│   ├── Student.cs
-│   ├── Admin.cs
-│   ├── Subject.cs
-│   ├── Grade.cs
-│   ├── Announcement.cs
-│   └── AuditLog.cs
-├── Database/               Data access layer
-│   ├── DatabaseHelper.cs   All SQL queries
-│   └── Session.cs          Static current-user holder
-├── DatabaseScripts/        SQL setup files (run in order)
+UniConnect-Repo/
+├── UniConnect/                 # C# Desktop Application
+│   ├── Models/                 # POCO data classes
+│   ├── Database/               # Data access layer & Session state
+│   ├── Resources/              # App imagery
+│   └── frm*.cs                 # Windows Forms (Login, Dashboard, etc.)
+│
+├── UniConnectAPI/              # PHP REST API Backend
+│   ├── config/                 # database.php connection string
+│   └── api/                    # Endpoint folders (auth, students, grades, admin, announcements)
+│
+├── UniConnectWeb/              # Web Portal Frontend
+│   ├── index.html              # Student Web Login
+│   ├── admin_login.html        # Admin Web Login
+│   └── *.html                  # Web Dashboards, Grades, and Announcement pages
+│
+├── DatabaseScripts/            # SQL setup files (run in order)
 │   ├── 01_create_database.sql
 │   ├── 02_create_tables.sql
 │   ├── 03_seed_data.sql
-├── Properties/
-├── Resources/              Logos
-├── App.config              Connection string config
-└── frm*.cs                 8 form files (Login, Dashboard, etc.)
+│   └── 04_announcement_reads.sql
+│
+├── .gitignore
+├── .gitattributes
+└── README.md
+```
 
-Setup
 
-To get this project running on your local machine, you need the "engine" to run the database and the "steering wheel" to manage it.
-1. Install prerequisites
 
-    Visual Studio 2026 (Community is fine) with the .NET Desktop Development workload.
+## Setup Instructions
 
-    MS SQL Server Express (The Engine):
+To run this full-stack project locally, you need to set up the Database, the Web/API Server, and the Desktop Application.
 
-        Go to the official Microsoft SQL Server downloads page.
+**1. Install Prerequisites**
 
-        Scroll down to the "Free editions" section.
+    Visual Studio (Community edition is fine) with the .NET Desktop Development workload.
 
-        Under Express, click the Download now button.
+    MS SQL Server Express: Download from Microsoft, select "Basic" installation.
 
-        Run the installer file that downloads (SQL2022-SSEI-Expr.exe or similar).
+    SQL Server Management Studio (SSMS): Download and install to manage the database.
 
-        Select the Basic installation type, accept the terms, and hit Install.
+    XAMPP: Download and install to run the Apache web server and PHP.
 
-    SQL Server Management Studio / SSMS (The Steering Wheel):
+**2. Set up the Local Database**
 
-        When the SQL Server Express installation finishes, click the "Install SSMS" button right on the success screen. (Alternatively, search "Download SSMS" on Google and click the "Free Download for SQL Server Management Studio" link).
+    Open SQL Server Management Studio (SSMS) and connect to your local server (usually localhost\SQLEXPRESS or YourComputerName\SQLEXPRESS).
 
-        Run the downloaded installer (SSMS-Setup-ENU.exe).
+    Go to File > Open > File... and open the scripts inside the DatabaseScripts/ folder.
 
-        Click Install and let it run (it may ask you to restart your computer afterward).
-
-2. Set up the local database
-
-    Open SQL Server Management Studio (SSMS) from your Windows Start menu.
-
-    A "Connect to Server" window will pop up. The Server Name should automatically be filled in (usually localhost\SQLEXPRESS or YourComputerName\SQLEXPRESS). Hit Connect.
-
-    Go to File > Open > File... and open the scripts in /DatabaseScripts/. Run them in this exact order by pressing F5 (or clicking Execute at the top) for each one:
+    Execute them in this exact order (press F5):
 
         01_create_database.sql
 
@@ -73,70 +78,82 @@ To get this project running on your local machine, you need the "engine" to run 
 
         03_seed_data.sql
 
+        04_announcement_reads.sql
 
-3. Configure the connection
+**3. Set up the Web Portal and API**
 
-Open App.config in the project root. By default the connection string is:
-XML
+    Open your XAMPP installation folder (usually C:\xampp\htdocs\).
 
-Server=localhost\SQLEXPRESS;Database=UniConnectDB;Integrated Security=True;TrustServerCertificate=True;
+    Copy the UniConnectAPI and UniConnectWeb folders from this repository and paste them directly into the htdocs folder.
 
-If your local SQL Server uses a different instance name (e.g., YOUR-PC\SQLEXPRESS), edit the Server= portion. Do not edit any C# source files to change the connection string.
-4. Build and run
+    Open the XAMPP Control Panel and click Start next to Apache.
 
-    Open UniConnect.sln in Visual Studio.
+    To access the web portal, open your browser and go to: http://localhost/UniConnectWeb/index.html
 
-    Restore NuGet packages (Visual Studio usually prompts automatically).
+**4. Configure and Run the Desktop App**
 
-    Press F5 to run the application.
+    Open UniConnect.slnx in Visual Studio.
 
+    Open App.config in the UniConnect project root.
 
-Default Test Credentials
-Student
+    Verify the connection string. By default, it is:
+    XML
+
+    Server=localhost\SQLEXPRESS;Database=UniConnectDB;Integrated Security=True;TrustServerCertificate=True;
+
+    (If your local SQL Server uses a different instance name, edit the Server= portion).
+
+    Do the same for the API: Open C:\xampp\htdocs\UniConnectAPI\config\database.php and ensure $serverName matches your SQL Server instance.
+
+    Press F5 in Visual Studio to run the desktop application.
+
+## Default Test Credentials
+
+**Student**
 
     Email: juan.delacruz@lpu.edu.ph
 
     Password: student123
+    (Other seeded student emails: maria.clara@lpu.edu.ph, padre.damaso@lpu.edu.ph, etc.)
 
-(Other student emails: maria.clara@lpu.edu.ph, padre.damaso@lpu.edu.ph, etc.)
-Admin
+**Admin**
 
     Email: admin@lpu.edu.ph (Juan Santos, ICT Admin)
 
     Password: admin123
+    (Other seeded admin emails: registrar@lpu.edu.ph, encoder@lpu.edu.ph)
 
-(Other admin emails: registrar@lpu.edu.ph, encoder@lpu.edu.ph)
-Features
-Student-side
+## Features
+**Student Portal (Desktop & Web)**
 
-    Login with database validation
+    Secure Login: Database-validated authentication.
 
-    Dashboard: GWA, enrolled units, year level, recent grades preview, latest announcements
+    Dashboard: Unified notifications feed (Web), GWA tracking, enrolled units, year level, and recent grades preview.
 
-    My Grades: full grade history with semester tabs (newest first), color-coded status, CSV export
+    My Grades: Full grade history with dynamic semester filtering (newest first), color-coded status badges, and CSV Grade Report export.
 
-    Announcements: full list with expand-on-click, read tracking, color-coded audience badges, search
+    Announcements: Full list with read-receipt tracking, expand-on-click details, audience badges, and search functionality.
 
-Admin-side
+**Admin Portal (Desktop & Web)**
 
-    Login with database validation
+    Admin Dashboard: High-level metrics (total students, pending grades), recent grade entries table, and a live audit log feed.
 
-    Admin Dashboard: total students / courses / pending grades / announcement counts, recent grade entries table, recent audit logs sidebar
+    Encode Grades: Search students by ID/Name, dynamically edit or remove grades with smart validation.
 
-    Encode Grades: search students, edit grades, transactional save with automatic audit logging
+    Post Announcements: Compose announcements with audience targeting, archive old announcements, and view posting history.
 
-    Post Announcement: create + archive announcements (transactional), live posted-announcements panel, search
+**Advanced System Architecture**
 
-Cross-cutting
+    API Synchronization: The Web Portal and Database communicate exclusively through a custom-built PHP REST API.
 
-    All write operations use SQL transactions (atomic update + audit log)
+    Atomic Transactions: All database writes (encoding grades, posting/archiving announcements) use SQL transactions ensuring updates and audit logs are saved simultaneously.
 
-    All queries are parameterized (SQL injection-safe)
+    Automated Audit Logging: Every administrative action is permanently logged in the audit_logs table.
 
-    Soft delete for announcements (is_archived flag preserves audit trail)
+    Data Integrity: Soft deletion for announcements (is_archived flag) and strict foreign key constraints.
 
-    Foreign key constraints enforce referential integrity
+    Query Optimization: Parameterized queries to prevent SQL injection and indexed primary keys (student_id, subject_code) for rapid retrieval.
 
-Team
+## Team
 
-Project group of 5, LPU-C.
+Developed by a project group of 5 at LPU-Cavite.

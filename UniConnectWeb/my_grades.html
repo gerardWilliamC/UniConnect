@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniConnect - My Grades</title>
+    <style>
+        :root {
+            --primary: #8B1538;
+            --primary-dark: #6B0F2A;
+            --bg-body: #F5F3F8;
+            --white: #FFFFFF;
+            --text-main: #212121;
+            --text-muted: #757575;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            --accent-gold: #F59E0B;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { display: flex; height: 100vh; background-color: var(--bg-body); overflow: hidden; }
+
+        /* --- SIDEBAR --- */
+        .sidebar { width: 260px; background-color: var(--primary); color: white; display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar-header { padding: 30px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-logo { width: 140px; height: auto; }
+        .sidebar-sub { font-size: 0.75rem; color: #ffc8c8; font-weight: bold; letter-spacing: 1px; margin-top: 10px; }
+        
+        .nav-list { flex: 1; padding: 20px 0; }
+        .nav-item { padding: 14px 30px; cursor: pointer; font-size: 0.95rem; color: rgba(255,255,255,0.8); transition: 0.2s; border-left: 4px solid transparent; }
+        .nav-item:hover { background-color: var(--primary-dark); }
+        .nav-item.active { background-color: var(--primary-dark); color: white; font-weight: bold; border-left-color: var(--accent-gold); }
+        
+        .sidebar-footer { padding: 20px; background-color: var(--primary-dark); display: flex; align-items: center; gap: 12px; cursor: pointer; transition: 0.2s; }
+        .sidebar-footer:hover { background-color: #5a0c22; }
+        .avatar-circle { width: 40px; height: 40px; background-color: var(--accent-gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white;}
+        .logout-icon { margin-left: auto; font-size: 1.2rem; color: rgba(255, 255, 255, 0.6); transition: 0.3s; }
+        .sidebar-footer:hover .logout-icon { color: white; transform: translateX(4px); }
+
+        /* --- MAIN CONTAINER --- */
+        .main-container { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        .top-bar { height: 80px; min-height: 80px; background: var(--white); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .sem-pill { background: #FCE8ED; color: var(--primary); padding: 8px 20px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; }
+
+        .dashboard-content { padding: 40px; max-width: 1400px; }
+
+        /* --- STAT CARDS --- */
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 25px; }
+        .stat-card { background: var(--white); padding: 25px 20px; border-radius: 10px; box-shadow: var(--shadow); }
+        .stat-label { color: var(--text-muted); font-size: 0.85rem; font-weight: 600; margin-bottom: 5px; text-transform: uppercase;}
+        .stat-value { font-size: 2.2rem; font-weight: 800; margin-bottom: 5px;}
+        .stat-sub { font-size: 0.8rem; color: var(--text-muted); }
+        
+        .val-primary { color: var(--primary); }
+        .val-main { color: var(--text-main); }
+        .val-pass { color: #059669; }
+        .val-fail { color: #DC2626; }
+
+        /* --- SEMESTER TABS --- */
+        .filter-row { display: flex; gap: 10px; overflow-x: auto; margin-bottom: 25px; padding-bottom: 5px; }
+        .sem-tab { background: var(--white); color: var(--text-muted); border: none; padding: 10px 20px; border-radius: 6px; font-size: 0.9rem; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: var(--shadow); white-space: nowrap; }
+        .sem-tab:hover { background: #F9FAFB; }
+        .sem-tab.active { background: var(--primary); color: white; }
+
+        /* --- GRADES TABLE --- */
+        .panel-grades { background: var(--white); border-radius: 10px; box-shadow: var(--shadow); overflow: hidden; position: relative;}
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; background: var(--primary); color: white; padding: 14px 20px; font-size: 0.85rem; font-weight: 600; }
+        td { padding: 16px 20px; border-bottom: 1px solid #F3F4F6; font-size: 0.9rem; color: var(--text-main); vertical-align: middle; }
+        
+        .status-pass { color: #059669; font-weight: 600; }
+        .status-fail { color: #DC2626; font-weight: 600; }
+        .status-pend { color: #D97706; font-weight: 600; }
+
+        /* --- TABLE FOOTER --- */
+        .panel-footer { display: flex; justify-content: space-between; align-items: center; padding: 20px; background: var(--white); border-top: 1px solid #F3F4F6;}
+        .pagination-info { font-size: 0.85rem; color: var(--text-muted); }
+        .btn-download { background: var(--text-main); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-download:hover { background: #000; }
+
+        .empty-state { padding: 40px; text-align: center; color: var(--text-muted); font-size: 1rem; }
+        .watermark { position: fixed; bottom: 30px; right: 30px; width: 100px; opacity: 0.8; pointer-events: none; }
+
+	/* =========================================================
+           📱 MOBILE RESPONSIVENESS (Max Width: 768px)
+           ========================================================= */
+        @media (max-width: 768px) {
+            /* 1. Stack the entire page vertically */
+            body { 
+                flex-direction: column; 
+                overflow-y: auto; 
+            }
+
+            /* 2. Convert Sidebar to a horizontal scrollable top-nav */
+            .sidebar { 
+                width: 100%; 
+                height: auto; 
+                flex-shrink: 0;
+            }
+            .sidebar-header { 
+                padding: 15px; 
+            }
+            .nav-list { 
+                display: flex; 
+                overflow-x: auto; 
+                padding: 0; 
+                white-space: nowrap; 
+            }
+            .nav-item { 
+                padding: 12px 20px; 
+                border-left: none; 
+                border-bottom: 4px solid transparent; 
+            }
+            .nav-item.active { 
+                border-left: none; 
+                border-bottom-color: var(--accent-gold); 
+            }
+            .sidebar-footer { 
+                justify-content: center; 
+            }
+
+            /* 3. Adjust Main Content Padding */
+            .main-container { 
+                overflow-y: visible; 
+            }
+            .top-bar { 
+                padding: 15px 20px; 
+                flex-direction: column; 
+                justify-content: center; 
+                gap: 10px; 
+                height: auto; 
+            }
+            .dashboard-content { 
+                padding: 20px; 
+            }
+
+            /* 4. Collapse Grids from Side-by-Side to Stacked */
+            .layout-row { 
+                grid-template-columns: 1fr !important; 
+                gap: 20px; 
+            }
+            .stats-grid { 
+                grid-template-columns: 1fr 1fr; /* 2 cards per row on mobile */
+                gap: 15px;
+            }
+
+            /* 5. Make Tables Horizontally Scrollable */
+            .panel-grades { 
+                overflow-x: auto; 
+            }
+            table { 
+                min-width: 600px; /* Forces table to allow scrolling instead of squishing */
+            }
+
+            /* 6. Stack Forms and Search Bars */
+            .search-panel { 
+                flex-direction: column; 
+            }
+            .btn-row { 
+                flex-direction: column; 
+            }
+            .btn { 
+                width: 100%; 
+            }
+
+            /* 7. Fix Login Pages */
+            .brand-panel, .login-panel { 
+                width: 100%; 
+                padding: 40px 20px; 
+            }
+            .login-box { 
+                padding: 0; 
+            }
+            .brand-panel::before, .brand-panel::after {
+                display: none; /* Hide decorative circles on mobile to save space */
+            }
+
+            /* 8. Hide Watermark on small screens to prevent overlap */
+            .watermark { 
+                display: none; 
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <img src="Resources/l2dm.png" alt="Logo" class="sidebar-logo">
+            <div class="sidebar-sub">STUDENT PORTAL</div>
+        </div>
+        
+        <div class="nav-list">
+            <div class="nav-item" onclick="window.location.href='dashboard.html'">Dashboard</div>
+            <div class="nav-item active" onclick="window.location.href='my_grades.html'">My Grades</div>
+            <div class="nav-item" onclick="alert('Schedule module coming soon.')">Schedule</div>
+            <div class="nav-item" onclick="alert('Enrollments module coming soon.')">Enrollments</div>
+            <div class="nav-item" onclick="window.location.href='announcements.html'">Announcements</div>
+            <div class="nav-item" onclick="alert('My Profile module coming soon.')">My Profile</div>
+        </div>
+
+        <div class="sidebar-footer" onclick="logoutStudent()" title="Sign Out">
+            <div class="avatar-circle" id="userInitials">JD</div>
+            <div style="flex: 1;">
+                <div style="font-weight: bold; font-size: 0.85rem;" id="footerName">Student Name</div>
+                <div style="font-size: 0.75rem; color: #ffc8c8;" id="footerId">2024-00001</div>
+            </div>
+            <div class="logout-icon">➔</div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="top-bar">
+            <h1 style="font-size: 1.5rem; font-weight: 800;">My Grades</h1>
+            <div class="sem-pill" id="semDisplay">Loading...</div>
+        </div>
+
+        <div class="dashboard-content">
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">GWA</div>
+                    <div class="stat-value val-primary" id="gwaValue">—</div>
+                    <div class="stat-sub">Selected semester</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Units</div>
+                    <div class="stat-value val-main" id="unitsValue">—</div>
+                    <div class="stat-sub">Selected semester</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Passed</div>
+                    <div class="stat-value val-pass" id="passedValue">—</div>
+                    <div class="stat-sub" id="passedSub">Subjects passed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Failed</div>
+                    <div class="stat-value val-fail" id="failedValue">—</div>
+                    <div class="stat-sub" id="failedSub">Subjects failed</div>
+                </div>
+            </div>
+
+            <div class="filter-row" id="semesterTabs">
+                </div>
+
+            <div class="panel-grades">
+                <table id="gradesTable" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Subject Name</th>
+                            <th>Units</th>
+                            <th>Instructor</th>
+                            <th>Grade</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gradesTableBody">
+                        </tbody>
+                </table>
+                <div class="empty-state" id="emptyState" style="display: none;">No grades available for this semester.</div>
+                
+                <div class="panel-footer">
+                    <div class="pagination-info" id="paginationInfo">Showing 0 subjects</div>
+                    <button class="btn-download" onclick="downloadReport()">Download Grade Report</button>
+                </div>
+            </div>
+
+        </div>
+
+        <img src="Resources/l1lm.png" alt="Watermark" class="watermark">
+    </div>
+
+    <script>
+        // Authentication Guard
+        const user = JSON.parse(localStorage.getItem('uniconnect_user'));
+        if (!user) { window.location.href = 'index.html'; }
+
+        // Populate User Info
+        document.getElementById('footerName').textContent = user.full_name;
+        document.getElementById('footerId').textContent = user.student_id;
+        document.getElementById('semDisplay').textContent = user.semester;
+        
+        const names = user.full_name.split(' ');
+        document.getElementById('userInitials').textContent = (names[0][0] + names[names.length-1][0]).toUpperCase();
+
+        function logoutStudent() {
+            localStorage.removeItem('uniconnect_user');
+            window.location.href = 'index.html';
+        }
+
+        let allGrades = [];
+        let uniqueSemesters = [];
+        let selectedSemester = user.semester;
+
+        async function fetchMyGrades() {
+            try {
+                const res = await fetch(`http://localhost/UniConnectAPI/api/students/read_grades.php?student_id=${user.student_id}`);
+                const data = await res.json();
+                
+                if (res.status === 200 && data.records) {
+                    allGrades = data.records;
+                    
+                    // Extract unique semesters like C# GetStudentSemesters logic
+                    uniqueSemesters = [...new Set(allGrades.map(g => g.semester))];
+                    
+                    // Sort logic: Year DESC, then 2nd Sem before 1st Sem
+                    uniqueSemesters.sort((a, b) => {
+                        const yearA = parseInt(a.match(/\d{4}/)?.[0] || 0);
+                        const yearB = parseInt(b.match(/\d{4}/)?.[0] || 0);
+                        if (yearA !== yearB) return yearB - yearA;
+                        
+                        const aIs2nd = a.includes("2nd");
+                        const bIs2nd = b.includes("2nd");
+                        if (aIs2nd && !bIs2nd) return -1;
+                        if (!aIs2nd && bIs2nd) return 1;
+                        return 0;
+                    });
+                }
+                
+                buildSemesterTabs();
+                renderSelectedSemester();
+
+            } catch (err) { console.error("Failed to load grades", err); }
+        }
+
+        function buildSemesterTabs() {
+            const container = document.getElementById('semesterTabs');
+            container.innerHTML = '';
+
+            if (uniqueSemesters.length === 0) {
+                container.innerHTML = '<div style="color: #757575; font-size: 0.9rem; padding: 10px;">No grade history found.</div>';
+                return;
+            }
+
+            // Ensure selected semester actually exists in the student's records
+            if (!uniqueSemesters.includes(selectedSemester)) {
+                selectedSemester = uniqueSemesters[0]; 
+            }
+
+            uniqueSemesters.forEach(sem => {
+                const btn = document.createElement('button');
+                btn.className = `sem-tab ${sem === selectedSemester ? 'active' : ''}`;
+                btn.textContent = sem;
+                btn.onclick = () => {
+                    selectedSemester = sem;
+                    buildSemesterTabs(); // Rebuild to update active classes
+                    renderSelectedSemester();
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function renderSelectedSemester() {
+            const filteredGrades = allGrades.filter(g => g.semester === selectedSemester);
+            
+            // 1. Calculate Stats
+            let totalUnits = 0;
+            let passedCount = 0;
+            let failedCount = 0;
+            let gwaTotalUnits = 0;
+            let gwaWeightedSum = 0;
+
+            filteredGrades.forEach(g => {
+                totalUnits += g.units;
+                if (g.status === "Passed") passedCount++;
+                if (g.status === "Failed") failedCount++;
+
+                // GWA only calculates Passed subjects with a valid grade
+                if (g.status === "Passed" && g.grade !== null) {
+                    gwaWeightedSum += (g.grade * g.units);
+                    gwaTotalUnits += g.units;
+                }
+            });
+
+            document.getElementById('unitsValue').textContent = totalUnits || "—";
+            document.getElementById('passedValue').textContent = passedCount;
+            document.getElementById('passedSub').textContent = passedCount === 1 ? "Subject passed" : "Subjects passed";
+            document.getElementById('failedValue').textContent = failedCount;
+            document.getElementById('failedSub').textContent = failedCount === 1 ? "Subject failed" : "Subjects failed";
+
+            if (gwaTotalUnits > 0) {
+                const gwa = (gwaWeightedSum / gwaTotalUnits).toFixed(2);
+                document.getElementById('gwaValue').textContent = gwa;
+            } else {
+                document.getElementById('gwaValue').textContent = "—";
+            }
+
+            // 2. Render Table
+            const tbody = document.getElementById('gradesTableBody');
+            tbody.innerHTML = '';
+            
+            if (filteredGrades.length === 0) {
+                document.getElementById('gradesTable').style.display = 'none';
+                document.getElementById('emptyState').style.display = 'block';
+                document.getElementById('paginationInfo').textContent = "Showing 0 subjects";
+            } else {
+                document.getElementById('gradesTable').style.display = 'table';
+                document.getElementById('emptyState').style.display = 'none';
+                document.getElementById('paginationInfo').textContent = `Showing ${filteredGrades.length} of ${filteredGrades.length} subjects`;
+
+                filteredGrades.forEach(g => {
+                    const gradeVal = g.grade !== null ? parseFloat(g.grade).toFixed(2) : "—";
+                    let statusClass = "status-pend";
+                    if (g.status === "Passed") statusClass = "status-pass";
+                    if (g.status === "Failed") statusClass = "status-fail";
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td style="font-weight:bold;">${g.subject_code}</td>
+                            <td>${g.subject_name}</td>
+                            <td>${g.units}</td>
+                            <td style="color:var(--text-muted); font-size:0.85rem;">${g.instructor || '—'}</td>
+                            <td style="font-weight:bold;">${gradeVal}</td>
+                            <td class="${statusClass}">${g.status || 'Pending'}</td>
+                        </tr>
+                    `;
+                });
+            }
+        }
+
+        function downloadReport() {
+            const filteredGrades = allGrades.filter(g => g.semester === selectedSemester);
+            
+            if (filteredGrades.length === 0) {
+                alert("There are no grades to download for this semester.");
+                return;
+            }
+
+            // Build CSV Content
+            let csvContent = "Subject Code,Subject Name,Units,Instructor,Grade,Status,Semester\n";
+            
+            filteredGrades.forEach(g => {
+                const gradeStr = g.grade !== null ? parseFloat(g.grade).toFixed(2) : "";
+                csvContent += `"${g.subject_code}","${g.subject_name}",${g.units},"${g.instructor || ''}",${gradeStr},"${g.status || 'Pending'}","${g.semester}"\n`;
+            });
+
+            // Create Blob and Download Link
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            
+            // Format filename safely
+            const safeSem = selectedSemester.replace(/ /g, "_").replace(/—/g, "-").replace(/\//g, "-");
+            link.setAttribute("download", `GradeReport_${user.student_id}_${safeSem}.csv`);
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Initialize Page
+        fetchMyGrades();
+    </script>
+</body>
+</html>
