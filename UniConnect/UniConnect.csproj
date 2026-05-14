@@ -250,6 +250,7 @@
     <Content Include="DatabaseScripts\01_create_database.sql" />
     <Content Include="DatabaseScripts\02_create_tables.sql" />
     <Content Include="DatabaseScripts\03_seed_data.sql" />
+    <Content Include="DatabaseScripts\04_announcement_reads.sql" />
     <Content Include="Resources\L1 - Dark Mode.png" />
     <Content Include="Resources\L1 - Light Mode.png" />
     <Content Include="Resources\L2 - Dark Mode.png" />
