@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniConnect - Student Login</title>
+    <style>
+        :root {
+            --primary: #8B1538;
+            --primary-dark: #6B0F2A;
+            --bg-color: #F8F8F8;
+            --text-dark: #212121;
+            --text-muted: #757575;
+            --border: #E0E0E0;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { display: flex; height: 100vh; background-color: var(--bg-color); overflow: hidden; }
+
+        /* --- LEFT SIDE: BRAND PANEL --- */
+        .brand-panel {
+            flex: 1;
+            background-color: var(--primary);
+            position: relative; /* Required for bubbles */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: white;
+            overflow: hidden; /* Clips the bubbles */
+        }
+
+        /* Circular Overlays (The "Bubbles") */
+        .brand-panel::before, .brand-panel::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            z-index: 1;
+        }
+        .brand-panel::before { width: 500px; height: 500px; top: -100px; left: -150px; }
+        .brand-panel::after { width: 400px; height: 400px; bottom: -100px; right: -100px; }
+
+        .brand-content { position: relative; z-index: 10; padding: 2rem; }
+        
+        /* Logo sized to match Admin */
+        .logo { 
+            width: 320px; 
+            height: auto; 
+            margin-bottom: 20px;
+        }
+
+        .portal-title { font-size: 1.5rem; font-weight: bold; margin-bottom: 10px; }
+        .portal-desc { 
+            font-size: 1rem; 
+            opacity: 0.8; 
+            line-height: 1.4;
+            margin-bottom: 30px;
+            max-width: 300px;
+        }
+
+        .access-pill {
+            background-color: rgba(0, 0, 0, 0.2);
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        /* --- RIGHT SIDE: LOGIN PANEL --- */
+        .login-panel {
+            flex: 1.5;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            padding-left: 100px;
+        }
+
+        .login-box { width: 100%; max-width: 600px; padding: 40px 0; }
+        .login-box h2 { font-size: 2.4rem; color: var(--primary); margin-bottom: 8px; font-weight: bold; }
+        .login-box p { color: var(--text-muted); margin-bottom: 25px; font-size: 1.1rem; }
+
+        .form-group { margin-bottom: 2rem; }
+        .label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .form-group label { font-weight: bold; color: var(--text-dark); font-size: 1rem; }
+        .forgot-link { font-size: 0.9rem; color: var(--text-dark); text-decoration: none; font-weight: 600; }
+        
+        .form-group input { 
+            width: 100%; padding: 16px; 
+            border: 1.5px solid var(--border); 
+            border-radius: 8px; font-size: 1rem; 
+            outline: none; background-color: white; 
+        }
+        .form-group input:focus { border-color: var(--primary); }
+
+        .btn-login { 
+            width: 100%; background-color: #212121; color: white; 
+            padding: 18px; border: none; border-radius: 8px; 
+            font-size: 1.1rem; font-weight: bold; cursor: pointer; 
+            transition: 0.2s; margin-bottom: 20px;
+        }
+
+        .btn-admin {
+            width: 100%; background-color: #F8F8FA; color: var(--text-dark);
+            padding: 16px; border: 1.5px solid var(--border);
+            border-radius: 8px; font-size: 1rem; font-weight: bold;
+            cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+
+        .footer-text { margin-top: 35px; text-align: center; font-size: 0.85rem; color: #9CA3AF; }
+
+	/* =========================================================
+           📱 MOBILE RESPONSIVENESS (Max Width: 768px)
+           ========================================================= */
+        @media (max-width: 768px) {
+            /* 1. Stack the entire page vertically */
+            body { 
+                flex-direction: column; 
+                overflow-y: auto; 
+            }
+
+            /* 2. Convert Sidebar to a horizontal scrollable top-nav */
+            .sidebar { 
+                width: 100%; 
+                height: auto; 
+                flex-shrink: 0;
+            }
+            .sidebar-header { 
+                padding: 15px; 
+            }
+            .nav-list { 
+                display: flex; 
+                overflow-x: auto; 
+                padding: 0; 
+                white-space: nowrap; 
+            }
+            .nav-item { 
+                padding: 12px 20px; 
+                border-left: none; 
+                border-bottom: 4px solid transparent; 
+            }
+            .nav-item.active { 
+                border-left: none; 
+                border-bottom-color: var(--accent-gold); 
+            }
+            .sidebar-footer { 
+                justify-content: center; 
+            }
+
+            /* 3. Adjust Main Content Padding */
+            .main-container { 
+                overflow-y: visible; 
+            }
+            .top-bar { 
+                padding: 15px 20px; 
+                flex-direction: column; 
+                justify-content: center; 
+                gap: 10px; 
+                height: auto; 
+            }
+            .dashboard-content { 
+                padding: 20px; 
+            }
+
+            /* 4. Collapse Grids from Side-by-Side to Stacked */
+            .layout-row { 
+                grid-template-columns: 1fr !important; 
+                gap: 20px; 
+            }
+            .stats-grid { 
+                grid-template-columns: 1fr 1fr; /* 2 cards per row on mobile */
+                gap: 15px;
+            }
+
+            /* 5. Make Tables Horizontally Scrollable */
+            .panel-grades { 
+                overflow-x: auto; 
+            }
+            table { 
+                min-width: 600px; /* Forces table to allow scrolling instead of squishing */
+            }
+
+            /* 6. Stack Forms and Search Bars */
+            .search-panel { 
+                flex-direction: column; 
+            }
+            .btn-row { 
+                flex-direction: column; 
+            }
+            .btn { 
+                width: 100%; 
+            }
+
+            /* 7. Fix Login Pages */
+            .brand-panel, .login-panel { 
+                width: 100%; 
+                padding: 40px 20px; 
+            }
+            .login-box { 
+                padding: 0; 
+            }
+            .brand-panel::before, .brand-panel::after {
+                display: none; /* Hide decorative circles on mobile to save space */
+            }
+
+            /* 8. Hide Watermark on small screens to prevent overlap */
+            .watermark { 
+                display: none; 
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="brand-panel">
+        <div class="brand-content">
+            <img src="Resources/l2dm.png" alt="UniConnect Logo" class="logo">
+            <h2 class="portal-title">Student Portal</h2>
+            <p class="portal-desc">
+                Access your grades, schedule, and announcements anytime.
+            </p>
+            <div class="access-pill">Student Access Portal</div>
+        </div>
+    </div>
+
+    <div class="login-panel">
+        <div class="login-box">
+            <h2>Welcome back</h2>
+            <p>Sign in to your student account</p>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Student Email</label>
+                    <input type="email" id="email" placeholder="your.name@lpu.edu.ph" required>
+                </div>
+                
+                <div class="form-group">
+                    <div class="label-row">
+                        <label>Password</label>
+                        <a href="#" class="forgot-link">Forgot password?</a>
+                    </div>
+                    <input type="password" id="password" placeholder="••••••••" required>
+                </div>
+                
+                <button type="submit" class="btn-login" id="submitBtn">Sign in as Student</button>
+            </form>
+
+            <button class="btn-admin" onclick="window.location.href='admin_login.html'">
+                Admin / Staff Login →
+            </button>
+            
+            <div class="footer-text">
+                UniConnect Portal &nbsp;&bull;&nbsp; LPU 2025-2026
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.textContent = 'Authenticating...';
+            submitBtn.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost/UniConnectAPI/api/auth/login.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, password: password })
+                });
+                const data = await response.json();
+                if (response.status === 200) {
+                    localStorage.setItem('uniconnect_user', JSON.stringify(data.user));
+                    window.location.href = 'dashboard.html';
+                } else {
+                    alert(data.message);
+                    submitBtn.textContent = 'Sign in as Student';
+                    submitBtn.disabled = false;
+                }
+            } catch (err) {
+                alert('Could not connect to server');
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

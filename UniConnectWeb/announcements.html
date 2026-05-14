@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniConnect - Announcements</title>
+    <style>
+        :root {
+            --primary: #8B1538;
+            --primary-dark: #6B0F2A;
+            --bg-body: #F5F3F8;
+            --white: #FFFFFF;
+            --text-main: #212121;
+            --text-muted: #757575;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            --border-unread: #8B1538;
+            --border-read: #D1D5DB;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { display: flex; height: 100vh; background-color: var(--bg-body); overflow: hidden; }
+
+        /* --- SIDEBAR --- */
+        .sidebar { width: 260px; background-color: var(--primary); color: white; display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar-header { padding: 30px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-logo { width: 140px; height: auto; margin-bottom: 10px; }
+        .sidebar-sub { font-size: 0.75rem; color: #ffc8c8; font-weight: bold; letter-spacing: 1px; }
+        .nav-list { flex: 1; padding: 20px 0; }
+        .nav-item { padding: 14px 30px; cursor: pointer; font-size: 0.95rem; color: rgba(255,255,255,0.8); transition: 0.2s; }
+        .nav-item:hover { background-color: var(--primary-dark); color: white; }
+        .nav-item.active { background-color: var(--primary-dark); color: white; font-weight: bold; }
+        .sidebar-footer { padding: 20px; background-color: var(--primary-dark); display: flex; align-items: center; gap: 12px; }
+	.sidebar-footer:hover { 
+            background-color: #5a0c22; /* Slightly darker red on hover */
+        }
+        .logout-icon { 
+            margin-left: auto; /* Pushes the icon to the far right */
+            font-size: 1.2rem; 
+            color: rgba(255, 255, 255, 0.6); 
+            transition: 0.3s; 
+        }
+        .sidebar-footer:hover .logout-icon { 
+            color: white; 
+            transform: translateX(4px); /* Slides the arrow to the right on hover */
+        }
+        .avatar-circle { width: 40px; height: 40px; background-color: #D97706; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+
+        /* --- MAIN CONTAINER --- */
+        .main-container { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        .top-bar { height: 80px; min-height: 80px; background: var(--white); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .sem-pill { background: #FCE8ED; color: var(--primary); padding: 8px 20px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; }
+
+        .content-layout { display: grid; grid-template-columns: 3fr 1fr; gap: 40px; padding: 40px; }
+        .section-title { font-size: 1.2rem; font-weight: 800; margin-bottom: 25px; color: var(--text-main); }
+
+        /* --- ANNOUNCEMENT CARDS (ACCORDION) --- */
+        .ann-card { background: var(--white); padding: 20px 25px; border-radius: 8px; box-shadow: var(--shadow); margin-bottom: 15px; cursor: pointer; border-left: 5px solid var(--border-unread); transition: 0.3s transform; }
+        .ann-card.read { border-left-color: var(--border-read); }
+        .ann-card:hover { transform: translateX(5px); }
+
+        .ann-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        .tag-row { display: flex; gap: 8px; }
+        .tag { padding: 3px 10px; border-radius: 15px; font-size: 0.65rem; font-weight: bold; text-transform: uppercase; }
+        .tag-new { background: #8B1538; color: white; }
+        .tag-category { background: #F3F4F6; color: var(--text-muted); }
+        .ann-title { font-size: 1.1rem; font-weight: 800; color: var(--primary); margin: 8px 0; }
+        
+        .ann-preview { font-size: 0.9rem; color: var(--text-muted); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+        .ann-card.expanded .ann-preview { display: none; }
+
+        .ann-body { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out; font-size: 0.95rem; color: var(--text-main); line-height: 1.6; }
+        .ann-card.expanded .ann-body { max-height: 1000px; padding-top: 15px; }
+        .ann-meta { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+
+        /* --- RIGHT SIDEBAR --- */
+        .info-card { background: var(--primary); color: white; padding: 12px 18px; border-radius: 10px; margin-bottom: 15px; }
+        .info-label { font-size: 0.65rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9; }
+        .unread-count { font-size: 2.2rem; font-weight: 800; margin: 2px 0; }
+        .search-box { display: flex; background: var(--white); padding: 4px; border-radius: 8px; box-shadow: var(--shadow); border: 1px solid #e0e0e0; }
+        .search-box input { flex: 1; border: none; padding: 10px; outline: none; font-size: 0.85rem; width: 50px; }
+        .search-box button { background: #000; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
+
+        .watermark { position: fixed; bottom: 30px; right: 30px; width: 100px; opacity: 0.8; pointer-events: none; }
+
+	/* =========================================================
+           📱 MOBILE RESPONSIVENESS (Max Width: 768px)
+           ========================================================= */
+        @media (max-width: 768px) {
+            /* 1. Stack the entire page vertically */
+            body { 
+                flex-direction: column; 
+                overflow-y: auto; 
+            }
+
+            /* 2. Convert Sidebar to a horizontal scrollable top-nav */
+            .sidebar { 
+                width: 100%; 
+                height: auto; 
+                flex-shrink: 0;
+            }
+            .sidebar-header { 
+                padding: 15px; 
+            }
+            .nav-list { 
+                display: flex; 
+                overflow-x: auto; 
+                padding: 0; 
+                white-space: nowrap; 
+            }
+            .nav-item { 
+                padding: 12px 20px; 
+                border-left: none; 
+                border-bottom: 4px solid transparent; 
+            }
+            .nav-item.active { 
+                border-left: none; 
+                border-bottom-color: var(--accent-gold); 
+            }
+            .sidebar-footer { 
+                justify-content: center; 
+            }
+
+            /* 3. Adjust Main Content Padding */
+            .main-container { 
+                overflow-y: visible; 
+            }
+            .top-bar { 
+                padding: 15px 20px; 
+                flex-direction: column; 
+                justify-content: center; 
+                gap: 10px; 
+                height: auto; 
+            }
+            .dashboard-content { 
+                padding: 20px; 
+            }
+
+            /* 4. Collapse Grids from Side-by-Side to Stacked */
+            .layout-row { 
+                grid-template-columns: 1fr !important; 
+                gap: 20px; 
+            }
+            .stats-grid { 
+                grid-template-columns: 1fr 1fr; /* 2 cards per row on mobile */
+                gap: 15px;
+            }
+
+            /* 5. Make Tables Horizontally Scrollable */
+            .panel-grades { 
+                overflow-x: auto; 
+            }
+            table { 
+                min-width: 600px; /* Forces table to allow scrolling instead of squishing */
+            }
+
+            /* 6. Stack Forms and Search Bars */
+            .search-panel { 
+                flex-direction: column; 
+            }
+            .btn-row { 
+                flex-direction: column; 
+            }
+            .btn { 
+                width: 100%; 
+            }
+
+            /* 7. Fix Login Pages */
+            .brand-panel, .login-panel { 
+                width: 100%; 
+                padding: 40px 20px; 
+            }
+            .login-box { 
+                padding: 0; 
+            }
+            .brand-panel::before, .brand-panel::after {
+                display: none; /* Hide decorative circles on mobile to save space */
+            }
+
+            /* 8. Hide Watermark on small screens to prevent overlap */
+            .watermark { 
+                display: none; 
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <img src="Resources/l2dm.png" alt="Logo" class="sidebar-logo">
+            <div class="sidebar-sub">STUDENT PORTAL</div>
+        </div>
+        <div class="nav-list">
+            <div class="nav-item" onclick="window.location.href='dashboard.html'">Dashboard</div>
+            <div class="nav-item" onclick="window.location.href='my_grades.html'">My Grades</div>
+            <div class="nav-item">Schedule</div>
+            <div class="nav-item">Enrollments</div>
+            <div class="nav-item active" onclick="window.location.href='announcements.html'">Announcements</div>
+            <div class="nav-item">My Profile</div>
+        </div>
+        <div class="sidebar-footer" onclick="logoutStudent()" title="Sign Out">
+            <div class="avatar-circle" id="userInitials">JD</div>
+            <div style="flex: 1;">
+                <div style="font-weight: bold; font-size: 0.85rem;" id="footerName">Student Name</div>
+                <div style="font-size: 0.75rem; color: #ffc8c8;" id="footerId">2024-00001</div>
+            </div>
+            <div class="logout-icon">➔</div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="top-bar">
+            <h1 style="font-size: 1.5rem; font-weight: 800;">Announcements</h1>
+            <div class="sem-pill" id="semDisplay">Loading...</div>
+        </div>
+
+        <div class="content-layout">
+            <div id="announcementFeed">
+                <h2 class="section-title">Latest Announcements</h2>
+                <div id="feedContainer"></div>
+            </div>
+            <div>
+                <h2 class="section-title">Quick Info</h2>
+                <div class="info-card">
+                    <div class="info-label">Unread Announcements</div>
+                    <div class="unread-count" id="unreadCount">0</div>
+                </div>
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search..." onkeyup="filterAnnouncements()">
+                    <button onclick="filterAnnouncements()">Search</button>
+                </div>
+            </div>
+        </div>
+
+        <img src="Resources/l1lm.png" alt="Watermark" class="watermark">
+    </div>
+
+    <script>
+        const user = JSON.parse(localStorage.getItem('uniconnect_user'));
+        if (!user) { window.location.href = 'index.html'; }
+
+        document.getElementById('footerName').textContent = user.full_name;
+        document.getElementById('footerId').textContent = user.student_id;
+        document.getElementById('semDisplay').textContent = user.semester;
+        const names = user.full_name.split(' ');
+        document.getElementById('userInitials').textContent = (names[0][0] + names[names.length-1][0]).toUpperCase();
+
+        let readAnnouncements = JSON.parse(localStorage.getItem(`read_ann_${user.student_id}`)) || [];
+        let allAnnouncements = [];
+
+        async function fetchAnnouncements() {
+            try {
+                const res = await fetch(`http://localhost/UniConnectAPI/api/announcements/read.php?student_id=${user.student_id}`);
+                const data = await res.json();
+                if (res.status === 200) {
+                    allAnnouncements = data.records;
+                    renderAnnouncements(allAnnouncements);
+                    updateUnreadCount();
+                    handleDeepLink();
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function renderAnnouncements(list) {
+            const container = document.getElementById('feedContainer');
+            container.innerHTML = "";
+            list.forEach(a => {
+                const isRead = readAnnouncements.includes(a.announcement_id);
+                const date = new Date(a.posted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const isNew = new Date(a.posted_at) > new Date(Date.now() - 48 * 60 * 60 * 1000);
+                container.innerHTML += `
+                    <div class="ann-card ${isRead ? 'read' : ''}" id="card-${a.announcement_id}" onclick="toggleAnnouncement(${a.announcement_id})">
+                        <div class="ann-header">
+                            <div class="tag-row">${isNew && !isRead ? '<span class="tag tag-new">NEW</span>' : ''}<span class="tag tag-category">${a.category || 'General'}</span></div>
+                            <span class="ann-meta">${date}</span>
+                        </div>
+                        <div class="ann-title">${a.title}</div>
+                        <div class="ann-preview">${a.content}</div>
+                        <div class="ann-body">${a.content}<div class="ann-meta" style="margin-top: 15px; display: block;">Posted by: ${a.posted_by || "Admin Office"}</div></div>
+                    </div>`;
+            });
+        }
+
+        function toggleAnnouncement(id) {
+            const card = document.getElementById(`card-${id}`);
+            if (!readAnnouncements.includes(id)) {
+                readAnnouncements.push(id);
+                localStorage.setItem(`read_ann_${user.student_id}`, JSON.stringify(readAnnouncements));
+                card.classList.add('read');
+                const tag = card.querySelector('.tag-new'); if(tag) tag.remove();
+                updateUnreadCount();
+            }
+            card.classList.toggle('expanded');
+        }
+
+        function updateUnreadCount() {
+            const unread = allAnnouncements.filter(a => !readAnnouncements.includes(a.announcement_id)).length;
+            document.getElementById('unreadCount').textContent = unread;
+        }
+
+        function handleDeepLink() {
+            const urlId = new URLSearchParams(window.location.search).get('id');
+            if (urlId) {
+                setTimeout(() => {
+                    const card = document.getElementById(`card-${urlId}`);
+                    if (card) { toggleAnnouncement(parseInt(urlId)); card.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+                }, 300);
+            }
+        }
+
+        function filterAnnouncements() {
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            renderAnnouncements(allAnnouncements.filter(a => a.title.toLowerCase().includes(q)));
+        }
+	function logoutStudent() {
+            localStorage.removeItem('uniconnect_user');
+            window.location.href = 'index.html';
+        }
+
+        fetchAnnouncements();
+    </script>
+</body>
+</html>
