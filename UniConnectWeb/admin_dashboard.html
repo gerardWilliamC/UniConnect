@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniConnect - Admin Dashboard</title>
+    <style>
+        :root {
+            --primary: #8B1538;
+            --primary-dark: #6B0F2A;
+            --bg-body: #F5F3F8;
+            --white: #FFFFFF;
+            --text-main: #212121;
+            --text-muted: #757575;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            --accent-gold: #F59E0B;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { display: flex; height: 100vh; background-color: var(--bg-body); overflow: hidden; }
+
+        /* --- SIDEBAR --- */
+        .sidebar { width: 260px; background-color: var(--primary); color: white; display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar-header { padding: 25px 20px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-logo-small { width: 40px; height: auto; }
+        .sidebar-brand-text { font-size: 1.2rem; font-weight: bold; line-height: 1.2; }
+        .sidebar-brand-sub { font-size: 0.75rem; color: #ffc8c8; }
+        
+        .nav-list { flex: 1; padding: 20px 0; }
+        .nav-item { padding: 14px 30px; cursor: pointer; font-size: 0.95rem; color: rgba(255,255,255,0.9); transition: 0.2s; border-left: 4px solid transparent; }
+        .nav-item:hover { background-color: var(--primary-dark); }
+        .nav-item.active { background-color: var(--primary-dark); color: white; font-weight: bold; border-left-color: var(--accent-gold); }
+        
+        .sidebar-footer { padding: 20px; background-color: var(--primary-dark); display: flex; align-items: center; gap: 12px; cursor: pointer; }
+	.sidebar-footer:hover { 
+            background-color: #5a0c22; /* Slightly darker red on hover */
+        }
+        .logout-icon { 
+            margin-left: auto; /* Pushes the icon to the far right */
+            font-size: 1.2rem; 
+            color: rgba(255, 255, 255, 0.6); 
+            transition: 0.3s; 
+        }
+        .sidebar-footer:hover .logout-icon { 
+            color: white; 
+            transform: translateX(4px); /* Slides the arrow to the right on hover */
+        }
+        .avatar-circle { width: 40px; height: 40px; background-color: var(--accent-gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; }
+
+        /* --- MAIN CONTAINER --- */
+        .main-container { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        .top-bar { height: 80px; min-height: 80px; background: var(--white); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .admin-pill { background: #FEF3C7; color: #92400E; padding: 8px 20px; border-radius: 6px; font-weight: bold; font-size: 0.85rem; }
+
+        .dashboard-content { padding: 40px; max-width: 1400px; }
+
+        /* --- STAT CARDS (Now with hover & click effects) --- */
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: var(--white); padding: 25px 20px; border-radius: 10px; box-shadow: var(--shadow); }
+        .stat-card.hover-card { cursor: pointer; transition: 0.2s; border-bottom: 3px solid transparent; }
+        .stat-card.hover-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-bottom-color: var(--primary); }
+        
+        .stat-label { color: var(--text-main); font-size: 0.85rem; font-weight: 600; margin-bottom: 10px; }
+        .stat-value { font-size: 2.5rem; font-weight: 800; color: var(--primary); }
+
+        /* --- LAYOUT GRID --- */
+        .layout-row { display: grid; grid-template-columns: 2.8fr 1fr; gap: 40px; align-items: start; }
+        .section-title { font-size: 1.1rem; font-weight: bold; color: var(--text-main); margin-bottom: 15px; }
+
+        /* Recent Grade Entries */
+        .panel-grades { background: var(--white); border-radius: 10px; box-shadow: var(--shadow); overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; background: var(--primary); color: white; padding: 14px 20px; font-size: 0.85rem; font-weight: 600; }
+        td { padding: 16px 20px; border-bottom: 1px solid #F3F4F6; font-size: 0.9rem; color: var(--text-main); }
+        
+        /* Interactive Table Rows */
+        tbody tr { cursor: pointer; transition: 0.2s; }
+        tbody tr:hover { background-color: #FCE8ED !important; }
+
+        .grade-pill { background: #FCE8ED; color: var(--primary); border: 1px solid var(--primary); padding: 4px 16px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; display: inline-block; }
+        .status-pass { color: #059669; font-weight: 600; }
+        .status-fail { color: #DC2626; font-weight: 600; }
+        .status-pend { color: #D97706; font-weight: 600; }
+
+        /* Interactive Audit Sidebar */
+        .audit-list { display: flex; flex-direction: column; gap: 12px; }
+        .audit-card { background: var(--white); padding: 14px 18px; border-radius: 10px; box-shadow: var(--shadow); display: flex; flex-direction: column; justify-content: center; border-left: 4px solid #10B981; cursor: pointer; transition: 0.2s;}
+        .audit-card:hover { transform: translateX(4px); box-shadow: 0 6px 10px -2px rgba(0,0,0,0.1); }
+        
+        .audit-header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+        .audit-dot { width: 10px; height: 10px; background-color: var(--accent-gold); border-radius: 50%; }
+        .audit-title { font-weight: bold; font-size: 0.95rem; color: var(--text-main); }
+        .audit-sub { font-size: 0.85rem; color: #6B21A8; margin: 2px 0 2px 20px; } 
+        .audit-time { font-size: 0.75rem; color: #9CA3AF; margin-left: 20px; }
+
+        .watermark { position: fixed; bottom: 30px; right: 30px; width: 100px; opacity: 0.8; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <img src="Resources/l2dm.png" alt="Logo" class="sidebar-logo-small">
+            <div>
+                <div class="sidebar-brand-text">UniConnect</div>
+                <div class="sidebar-brand-sub">Admin Panel</div>
+            </div>
+        </div>
+        
+        <div class="nav-list">
+            <div class="nav-item active" onclick="window.location.href='admin_dashboard.html'">Dashboard</div>
+            <div class="nav-item" onclick="alert('Manage Students module coming soon.')">Manage Students</div>
+            <div class="nav-item" onclick="window.location.href='encode_grades.html'">Encode Grades</div>
+            <div class="nav-item" onclick="alert('Manage Enrollments module coming soon.')">Manage Enrollments</div>
+            <div class="nav-item" onclick="window.location.href='post_announcement.html'">Post Announcements</div>
+            <div class="nav-item" onclick="alert('Generate Reports module coming soon.')">Generate Reports</div>
+            <div class="nav-item" onclick="alert('Audit Logs module coming soon.')">Audit Logs</div>
+        </div>
+
+        <div class="sidebar-footer" onclick="logoutAdmin()" title="Sign Out">
+            <div class="avatar-circle" id="adminInitials">AD</div>
+            <div style="flex: 1;">
+                <div style="font-weight: bold; font-size: 0.9rem;" id="adminName">Administrator</div>
+                <div style="font-size: 0.75rem; color: #ffc8c8;" id="adminRole">ICT Admin</div>
+            </div>
+            <div class="logout-icon">➔</div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="top-bar">
+            <h1 style="font-size: 1.4rem; font-weight: bold;">Admin Dashboard</h1>
+            <div class="admin-pill">Administrator Access</div>
+        </div>
+
+        <div class="dashboard-content">
+            
+            <div class="stats-grid">
+                <div class="stat-card hover-card" onclick="alert('Manage Students module coming soon.')" title="Go to Manage Students">
+                    <div class="stat-label">Total Students</div>
+                    <div class="stat-value" id="statStudents">—</div>
+                </div>
+                <div class="stat-card hover-card" onclick="alert('Courses module coming soon.')" title="Go to Courses">
+                    <div class="stat-label">Courses</div>
+                    <div class="stat-value" id="statCourses">—</div>
+                </div>
+                <div class="stat-card hover-card" onclick="window.location.href='encode_grades.html'" title="Go to Encode Grades">
+                    <div class="stat-label">Pending Grades</div>
+                    <div class="stat-value" id="statPending">—</div>
+                </div>
+                <div class="stat-card hover-card" onclick="window.location.href='post_announcement.html'" title="Go to Post Announcements">
+                    <div class="stat-label">Announcements</div>
+                    <div class="stat-value" id="statAnnouncements">—</div>
+                </div>
+            </div>
+
+            <div class="layout-row">
+                <div>
+                    <h2 class="section-title">Recent Grade Entries</h2>
+                    <div class="panel-grades">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Subject</th>
+                                    <th>Grade</th>
+                                    <th>Status</th>
+                                    <th>Updated By</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="gradesTableBody">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div>
+                    <h2 class="section-title">Recent Audit Logs</h2>
+                    <div class="audit-list" id="auditList">
+                        </div>
+                </div>
+            </div>
+        </div>
+
+        <img src="Resources/l1lm.png" alt="Watermark" class="watermark">
+    </div>
+
+    <script>
+        const adminUser = JSON.parse(localStorage.getItem('uniconnect_admin'));
+        if (!adminUser) { window.location.href = 'admin_login.html'; }
+
+        document.getElementById('adminName').textContent = adminUser.name || "Administrator";
+        document.getElementById('adminRole').textContent = adminUser.role || "ICT Admin";
+        if (adminUser.name) {
+            const names = adminUser.name.split(' ');
+            document.getElementById('adminInitials').textContent = (names[0][0] + (names.length > 1 ? names[names.length-1][0] : '')).toUpperCase();
+        }
+
+        function logoutAdmin() {
+            localStorage.removeItem('uniconnect_admin');
+            window.location.href = 'admin_login.html';
+        }
+
+        let studentDirectory = {}; 
+
+        async function fetchStudentDirectory() {
+            try {
+                const res = await fetch('http://localhost/UniConnectAPI/api/students/read.php');
+                const data = await res.json();
+                if (data.records) {
+                    data.records.forEach(s => { studentDirectory[s.student_id] = s.full_name; });
+                }
+            } catch (err) { console.error("Could not load directory."); }
+        }
+
+        function formatShortName(fullName) {
+            if (!fullName) return "Student";
+            const parts = fullName.split(' ').filter(p => p.trim() !== '');
+            if (parts.length === 1) return parts[0];
+            return parts[0] + ' ' + parts[1].charAt(0).toUpperCase() + '.';
+        }
+
+        async function fetchAdminData() {
+            try {
+                const res = await fetch(`http://localhost/UniConnectAPI/api/admin/dashboard.php?t=${new Date().getTime()}`);
+                if (!res.ok) throw new Error("Dashboard API not responding.");
+                
+                const data = await res.json();
+
+                // 1. Update Stat Cards
+                document.getElementById('statStudents').textContent = data.stats.total_students;
+                document.getElementById('statCourses').textContent = data.stats.total_courses;
+                document.getElementById('statPending').textContent = data.stats.pending_grades;
+                document.getElementById('statAnnouncements').textContent = data.stats.announcement_count;
+
+                // 2. Update Recent Grades Table (Added onclick routing)
+                const gradesBody = document.getElementById('gradesTableBody');
+                gradesBody.innerHTML = "";
+                
+                if(data.recent_grades.length === 0) {
+                    gradesBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 25px;">No recent grades encoded.</td></tr>';
+                } else {
+                    data.recent_grades.forEach(g => {
+                        const gradeVal = g.grade ? parseFloat(g.grade).toFixed(2) : "—";
+                        const dateObj = new Date(g.updated_at);
+                        const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        
+                        let statusClass = "status-pend";
+                        if(g.status === "Passed") statusClass = "status-pass";
+                        if(g.status === "Failed") statusClass = "status-fail";
+
+                        // Notice the onclick event routing you to the encode grades page
+                        gradesBody.innerHTML += `
+                            <tr onclick="window.location.href='encode_grades.html'" title="Go to Encode Grades">
+                                <td style="font-weight:bold;">${g.student_name}</td>
+                                <td>${g.subject_code} - ${g.subject_name}</td>
+                                <td><span class="grade-pill">${gradeVal}</span></td>
+                                <td class="${statusClass}">${g.status || 'Pending'}</td>
+                                <td>${g.edited_by}</td>
+                                <td>${dateStr}</td>
+                            </tr>
+                        `;
+                    });
+                }
+
+                // 3. Update Audit Logs (Added onclick routing)
+                const auditList = document.getElementById('auditList');
+                auditList.innerHTML = "";
+                
+                if (!data.audit_logs || data.audit_logs.length === 0) {
+                    auditList.innerHTML = '<div style="color:#757575; font-size:0.9rem; text-align:center; margin-top:20px;">No recent activity.</div>';
+                    return;
+                }
+
+                data.audit_logs.forEach(log => {
+                    const timeStr = new Date(log.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                    let subText = log.details || "Details unavailable";
+                    
+                    if(log.action_type.includes('Grade')) {
+                        let subject = "Subject"; let studentId = "ID";
+                        const matchNew = log.details.match(/Updated (.*?) for (.*?) to/);
+                        const matchOld = log.details.match(/Updated grade for (.*?) in (.*)/);
+                        if (matchNew && matchNew.length === 3) { subject = matchNew[1]; studentId = matchNew[2]; } 
+                        else if (matchOld && matchOld.length === 3) { studentId = matchOld[1]; subject = matchOld[2]; }
+                        if (matchNew || matchOld) {
+                            const fullName = studentDirectory[studentId] || studentId;
+                            subText = `${subject} — ${formatShortName(fullName)}`; 
+                        }
+                    }
+
+                    let dotColor = "var(--accent-gold)";
+                    let targetTab = "alert('Module coming soon.')";
+                    
+                    // Route to proper tab based on log type!
+                    if(log.action_type.includes('Grade')) {
+                        dotColor = "#10B981"; // Green
+                        targetTab = "window.location.href='encode_grades.html'";
+                    }
+                    if(log.action_type.includes('Announcement') || log.action_type.includes('Archive')) {
+                        dotColor = "#9CA3AF"; // Gray
+                        targetTab = "window.location.href='post_announcement.html'";
+                    }
+                    
+                    auditList.innerHTML += `
+                        <div class="audit-card" style="border-left-color: ${dotColor}" onclick="${targetTab}" title="View Details">
+                            <div class="audit-header">
+                                <div class="audit-dot" style="background-color: ${dotColor}"></div>
+                                <div class="audit-title">${log.action_type}</div>
+                            </div>
+                            <div class="audit-sub">${subText}</div>
+                            <div class="audit-time">${log.performed_by_name} &middot; ${timeStr}</div>
+                        </div>
+                    `;
+                });
+
+            } catch (err) {
+                console.error("Failed to load dashboard data", err);
+            }
+        }
+
+        async function initDashboard() {
+            await fetchStudentDirectory();
+            await fetchAdminData();
+        }
+
+        initDashboard();
+    </script>
+</body>
+</html>

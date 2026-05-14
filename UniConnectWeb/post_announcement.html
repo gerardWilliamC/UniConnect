@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniConnect - Post Announcement</title>
+    <style>
+        :root {
+            --primary: #8B1538;
+            --primary-dark: #6B0F2A;
+            --bg-body: #F5F3F8;
+            --white: #FFFFFF;
+            --text-main: #212121;
+            --text-muted: #757575;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            --accent-gold: #F59E0B;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { display: flex; height: 100vh; background-color: var(--bg-body); overflow: hidden; }
+
+        /* --- SIDEBAR --- */
+        .sidebar { width: 260px; background-color: var(--primary); color: white; display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar-header { padding: 25px 20px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-logo-small { width: 40px; height: auto; }
+        .sidebar-brand-text { font-size: 1.2rem; font-weight: bold; line-height: 1.2; }
+        .sidebar-brand-sub { font-size: 0.75rem; color: #ffc8c8; }
+        
+        .nav-list { flex: 1; padding: 20px 0; }
+        .nav-item { padding: 14px 30px; cursor: pointer; font-size: 0.95rem; color: rgba(255,255,255,0.9); transition: 0.2s; border-left: 4px solid transparent; }
+        .nav-item:hover { background-color: var(--primary-dark); }
+        .nav-item.active { background-color: var(--primary-dark); color: white; font-weight: bold; border-left-color: var(--accent-gold); }
+        
+        .sidebar-footer { padding: 20px; background-color: var(--primary-dark); display: flex; align-items: center; gap: 12px; cursor: pointer; }
+	.sidebar-footer:hover { 
+            background-color: #5a0c22; /* Slightly darker red on hover */
+        }
+        .logout-icon { 
+            margin-left: auto; /* Pushes the icon to the far right */
+            font-size: 1.2rem; 
+            color: rgba(255, 255, 255, 0.6); 
+            transition: 0.3s; 
+        }
+        .sidebar-footer:hover .logout-icon { 
+            color: white; 
+            transform: translateX(4px); /* Slides the arrow to the right on hover */
+        }
+        .avatar-circle { width: 40px; height: 40px; background-color: var(--accent-gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; }
+
+        /* --- MAIN CONTAINER --- */
+        .main-container { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        .top-bar { height: 80px; min-height: 80px; background: var(--white); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .admin-pill { background: #FEF3C7; color: #92400E; padding: 8px 20px; border-radius: 6px; font-weight: bold; font-size: 0.85rem; }
+
+        .dashboard-content { padding: 40px; max-width: 1400px; }
+
+        /* --- SEARCH ROW --- */
+        .search-panel { background: var(--white); padding: 15px 25px; border-radius: 10px; box-shadow: var(--shadow); display: flex; gap: 15px; margin-bottom: 30px; }
+        .search-input { flex: 1; padding: 12px 15px; border: 1.5px solid #D1D5DB; border-radius: 6px; font-size: 0.95rem; outline: none; background: #F9FAFB;}
+        .search-input:focus { border-color: var(--primary); background: #FFF;}
+        .btn-search { background: var(--text-main); color: white; border: none; padding: 0 25px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-search:hover { background: #000; }
+
+        /* --- LAYOUT GRID --- */
+        .layout-row { display: grid; grid-template-columns: 2fr 1.2fr; gap: 30px; align-items: start; }
+        .section-title { font-size: 1.1rem; font-weight: bold; color: var(--text-main); margin-bottom: 15px; }
+
+        /* --- FORM PANEL --- */
+        .panel-form { background: var(--white); border-radius: 10px; box-shadow: var(--shadow); padding: 30px 25px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-weight: bold; font-size: 0.9rem; color: var(--text-main); margin-bottom: 8px; }
+        .form-control { width: 100%; padding: 12px 15px; border: 1.5px solid #D1D5DB; border-radius: 6px; font-size: 0.95rem; background: #F9FAFB; outline: none; font-family: 'Segoe UI', sans-serif;}
+        .form-control:focus { border-color: var(--primary); background: #FFF; }
+        textarea.form-control { resize: none; height: 180px; }
+        
+        .btn-row { display: flex; gap: 12px; margin-top: 30px; }
+        .btn { padding: 12px 20px; border-radius: 6px; font-weight: bold; font-size: 0.9rem; cursor: pointer; transition: 0.2s; border: none; text-align: center; }
+        .btn-post { background: var(--text-main); color: white; }
+        .btn-post:hover { background: #000; }
+        .btn-archive { background: white; border: 1.5px solid var(--primary); color: var(--primary); flex: 1; }
+        .btn-archive:hover { background: #FCE8ED; }
+        .btn-cancel { background: #F3F4F6; color: var(--text-muted); border: 1.5px solid #D1D5DB; flex: 1;}
+        .btn-cancel:hover { background: #E5E7EB; color: var(--text-main); }
+
+        /* --- POSTED SIDEBAR --- */
+        .posted-list { display: flex; flex-direction: column; gap: 12px; max-height: 600px; overflow-y: auto; padding-right: 5px;}
+        .posted-card { background: var(--white); padding: 16px; border-radius: 10px; box-shadow: var(--shadow); border-left: 4px solid var(--primary); cursor: pointer; transition: 0.2s; position: relative;}
+        .posted-card:hover { transform: translateX(4px); }
+        .posted-card.selected { border-left-color: var(--accent-gold); background: #FEF3C7; }
+        .posted-card.archived { border-left-color: #9CA3AF; opacity: 0.7; }
+        
+        .posted-title { font-weight: bold; font-size: 0.95rem; color: var(--text-main); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 60px;}
+        .posted-body { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;}
+        .posted-meta { font-size: 0.75rem; color: #9CA3AF; }
+        .archived-badge { position: absolute; top: 16px; right: 16px; background: #E5E7EB; color: #4B5563; font-size: 0.65rem; font-weight: bold; padding: 3px 8px; border-radius: 12px; }
+
+        .watermark { position: fixed; bottom: 30px; right: 30px; width: 100px; opacity: 0.8; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <img src="Resources/l2dm.png" alt="Logo" class="sidebar-logo-small">
+            <div>
+                <div class="sidebar-brand-text">UniConnect</div>
+                <div class="sidebar-brand-sub">Admin Panel</div>
+            </div>
+        </div>
+        
+        <div class="nav-list">
+            <div class="nav-item" onclick="window.location.href='admin_dashboard.html'">Dashboard</div>
+            <div class="nav-item">Manage Students</div>
+            <div class="nav-item" onclick="window.location.href='encode_grades.html'">Encode Grades</div>
+            <div class="nav-item">Manage Enrollments</div>
+            <div class="nav-item active" onclick="window.location.href='post_announcement.html'">Post Announcements</div>
+            <div class="nav-item">Generate Reports</div>
+            <div class="nav-item">Audit Logs</div>
+        </div>
+
+        <div class="sidebar-footer" onclick="logoutAdmin()" title="Sign Out">
+            <div class="avatar-circle" id="adminInitials">AD</div>
+            <div style="flex: 1;">
+                <div style="font-weight: bold; font-size: 0.9rem;" id="adminName">Administrator</div>
+                <div style="font-size: 0.75rem; color: #ffc8c8;" id="adminRole">ICT Admin</div>
+            </div>
+            <div class="logout-icon">➔</div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="top-bar">
+            <h1 style="font-size: 1.4rem; font-weight: bold;">Post Announcements</h1>
+            <div class="admin-pill">Administrator Access</div>
+        </div>
+
+        <div class="dashboard-content">
+            
+            <div class="search-panel">
+                <input type="text" id="searchInput" class="search-input" placeholder="Search Announcement ID or keywords..." onkeypress="if(event.key === 'Enter') filterAnnouncements()">
+                <button class="btn-search" onclick="filterAnnouncements()">Search</button>
+            </div>
+
+            <div class="layout-row">
+                
+                <div>
+                    <h2 class="section-title">New Announcement</h2>
+                    <div class="panel-form">
+                        <div class="form-group">
+                            <label>Title</label>
+                            <input type="text" id="inpTitle" class="form-control" placeholder="Enter announcement title...">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Target Audience</label>
+                            <select id="inpAudience" class="form-control">
+                                <option value="All">All</option>
+                                <option value="Students">Students</option>
+                                <option value="Faculty">Faculty</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Content</label>
+                            <textarea id="inpContent" class="form-control" placeholder="Write your announcement here..."></textarea>
+                        </div>
+
+                        <div class="btn-row">
+                            <button class="btn btn-post" onclick="postAnnouncement()">Post Announcement</button>
+                            <button class="btn btn-archive" onclick="archiveAnnouncement()">Archive</button>
+                            <button class="btn btn-cancel" onclick="clearForm()">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h2 class="section-title">Posted Announcements</h2>
+                    <div class="posted-list" id="postedList">
+                        </div>
+                </div>
+
+            </div>
+        </div>
+
+        <img src="Resources/l1lm.png" alt="Watermark" class="watermark">
+    </div>
+
+    <script>
+        const adminUser = JSON.parse(localStorage.getItem('uniconnect_admin'));
+        if (!adminUser) { window.location.href = 'admin_login.html'; }
+
+        document.getElementById('adminName').textContent = adminUser.name || "Administrator";
+        document.getElementById('adminRole').textContent = adminUser.role || "ICT Admin";
+        if (adminUser.name) {
+            const names = adminUser.name.split(' ');
+            document.getElementById('adminInitials').textContent = (names[0][0] + (names.length > 1 ? names[names.length-1][0] : '')).toUpperCase();
+        }
+
+        function logoutAdmin() {
+            localStorage.removeItem('uniconnect_admin');
+            window.location.href = 'admin_login.html';
+        }
+
+        let allAnnouncements = [];
+        let selectedAnnouncementId = -1;
+
+        async function fetchHistory() {
+            try {
+                const res = await fetch(`http://localhost/UniConnectAPI/api/admin/read_announcements.php?t=${new Date().getTime()}`);
+                const data = await res.json();
+                
+                if (data.records) {
+                    allAnnouncements = data.records;
+                    renderHistory(allAnnouncements);
+                }
+            } catch (err) { console.error("Failed to fetch announcements.", err); }
+        }
+
+        function renderHistory(list) {
+            const container = document.getElementById('postedList');
+            container.innerHTML = '';
+
+            if (list.length === 0) {
+                container.innerHTML = '<div style="color:#757575; font-size:0.9rem; text-align:center; margin-top:40px;">No announcements found.</div>';
+                return;
+            }
+
+            list.forEach(a => {
+                const isSelected = (a.announcement_id == selectedAnnouncementId);
+                let classes = "posted-card";
+                if (isSelected) classes += " selected";
+                if (a.is_archived) classes += " archived";
+
+                const dateStr = new Date(a.posted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const badgeHtml = a.is_archived ? '<div class="archived-badge">ARCHIVED</div>' : '';
+
+                container.innerHTML += `
+                    <div class="${classes}" onclick="selectAnnouncement(${a.announcement_id})">
+                        ${badgeHtml}
+                        <div class="posted-title">${a.title}</div>
+                        <div class="posted-body">${a.content}</div>
+                        <div class="posted-meta">${a.target_audience} &middot; ${dateStr} &middot; ${a.posted_by_name || 'Admin'}</div>
+                    </div>
+                `;
+            });
+        }
+
+        function selectAnnouncement(id) {
+            selectedAnnouncementId = (selectedAnnouncementId === id) ? -1 : id;
+            filterAnnouncements(); 
+        }
+
+        function filterAnnouncements() {
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            if (!q) {
+                renderHistory(allAnnouncements);
+                return;
+            }
+            const filtered = allAnnouncements.filter(a => 
+                a.title.toLowerCase().includes(q) || 
+                a.content.toLowerCase().includes(q) ||
+                a.announcement_id.toString() === q
+            );
+            renderHistory(filtered);
+        }
+
+        function clearForm() {
+            document.getElementById('inpTitle').value = "";
+            document.getElementById('inpContent').value = "";
+            document.getElementById('inpAudience').value = "All";
+            selectedAnnouncementId = -1;
+            filterAnnouncements();
+        }
+
+        async function postAnnouncement() {
+            const title = document.getElementById('inpTitle').value.trim();
+            const content = document.getElementById('inpContent').value.trim();
+            const audience = document.getElementById('inpAudience').value;
+
+            if (!title || !content) {
+                alert("Please provide both a title and content.");
+                return;
+            }
+
+            if (!confirm(`Publish this announcement to ${audience}?`)) return;
+
+            try {
+                const res = await fetch('http://localhost/UniConnectAPI/api/announcements/create.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title: title,
+                        content: content,
+                        target_audience: audience,
+                        admin_id: adminUser.admin_id
+                    })
+                });
+
+                const data = await res.json();
+                if (res.status === 200) {
+                    alert("Announcement published successfully!");
+                    clearForm();
+                    fetchHistory();
+                } else {
+                    alert("Failed to post: " + data.message);
+                }
+            } catch (err) { alert("Network error. Could not connect to API."); }
+        }
+
+        async function archiveAnnouncement() {
+            if (selectedAnnouncementId === -1) {
+                alert("Please click an active announcement on the right to select it first.");
+                return;
+            }
+
+            const target = allAnnouncements.find(a => a.announcement_id == selectedAnnouncementId);
+            if (!target) return;
+
+            if (target.is_archived) {
+                alert("This announcement is already archived.");
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to archive:\n"${target.title}"?\n\nIt will no longer be visible to users.`)) return;
+
+            try {
+                const res = await fetch('http://localhost/UniConnectAPI/api/admin/archive_announcement.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        announcement_id: target.announcement_id,
+                        admin_id: adminUser.admin_id,
+                        title: target.title
+                    })
+                });
+
+                const data = await res.json();
+                if (res.status === 200) {
+                    selectedAnnouncementId = -1;
+                    fetchHistory();
+                } else {
+                    alert("Failed to archive: " + data.message);
+                }
+            } catch (err) { alert("Network error."); }
+        }
+
+        fetchHistory();
+    </script>
+</body>
+</html>
