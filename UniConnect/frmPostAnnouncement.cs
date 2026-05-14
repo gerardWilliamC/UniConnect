@@ -558,5 +558,32 @@ namespace UniConnect
             MessageBox.Show("Audit Logs (full view) — not part of this build phase.",
                 "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
+
+        private void btnLogout_Click(object sender, EventArgs e)
+        {
+            DialogResult result = MessageBox.Show("Are you sure you want to sign out?",
+                "Logout", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+            if (result == DialogResult.Yes)
+            {
+                PerformLogout();
+            }
+        }
+
+        private void PerformLogout()
+        {
+            // Check which session is active before clearing
+            bool isAdmin = UniConnect.Database.Session.IsAdmin;
+
+            // Clear the global session data
+            UniConnect.Database.Session.Clear();
+
+            // Direct to the appropriate login form
+            Form loginForm = isAdmin ? (Form)new frmAdminLogin() : (Form)new frmStudentLogin();
+
+            loginForm.Show();
+            this.Close();
+        }
+
     }
 }

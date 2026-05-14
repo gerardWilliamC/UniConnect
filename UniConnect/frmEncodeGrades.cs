@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using UniConnect.Database;
 using UniConnect.Models;
@@ -9,13 +10,17 @@ namespace UniConnect
 {
     public partial class frmEncodeGrades : Form
     {
+        // =====================================================================
+        // STATE MANAGEMENT
+        // =====================================================================
+
         // The student currently selected (or null if no search yet)
         private Student _currentStudent = null;
 
-        // Cache of the grades currently shown — used to detect what changed when saving
+        // Cache of the grades currently shown — used for filtering and update detection
         private List<Grade> _currentGrades = new List<Grade>();
 
-        // Search placeholder text behavior (since our .NET version doesn't have PlaceholderText)
+        // Search placeholder constants for older .NET versions
         private const string SEARCH_PLACEHOLDER = "  Search by student ID or name…";
         private bool _searchPlaceholderShown = true;
 
@@ -28,6 +33,7 @@ namespace UniConnect
         {
             LoadLogo();
 
+            // Authentication Guard
             if (Session.CurrentAdmin == null)
             {
                 MessageBox.Show("Session expired. Please log in again.",
@@ -39,29 +45,29 @@ namespace UniConnect
 
             Admin me = Session.CurrentAdmin;
 
+            // Sidebar & Top Bar Setup
             lblUserName.Text = me.FullName;
             lblUserId.Text = me.AdminId;
             lblAdminPill.Text = me.Role ?? "Admin";
 
-            // Search box placeholder
+            // Component Initialization
             SetupSearchPlaceholder();
-
-            // Empty grid until a student is searched
             StyleGradesGrid();
             ShowSearchPrompt();
 
-            // Recent changes sidebar
+            // Initial sidebar refresh
             RefreshRecentChanges();
         }
 
         private void LoadLogo()
         {
+            //
             pbSidebarLogo.Image = Properties.Resources.l2lm;
             pbWatermark.Image = Properties.Resources.l1lm;
         }
 
         // =====================================================================
-        // SEARCH BOX (manual placeholder — older .NET doesn't have PlaceholderText)
+        // SEARCH & FILTERING LOGIC (Mirrors Web Portal)
         // =====================================================================
 
         private void SetupSearchPlaceholder()
@@ -90,7 +96,6 @@ namespace UniConnect
                 }
             };
 
-            // Allow pressing Enter inside the search box to trigger search
             txtSearch.KeyDown += (s, e) =>
             {
                 if (e.KeyCode == Keys.Enter)
@@ -115,18 +120,41 @@ namespace UniConnect
 
             try
             {
-                _currentStudent = db.FindStudent(query);
+                _currentStudent = db.FindStudent(query); //
 
-                if (_currentStudent == null)
+                if (_currentStudent != null)
                 {
+                    // Populate Header Details (Mirroring student-info-header on web)
+                    lblStudentNameHeader.Text = _currentStudent.FullName;
+                    lblStudentIdHeader.Text = $"ID: {_currentStudent.StudentId} | {_currentStudent.Program}";
+                    pnlStudentInfo.Visible = true;
+
+                    // Fetch all grades for this student to enable filtering
+                    _currentGrades = db.GetStudentGrades(_currentStudent.StudentId); //
+
+                    // Populate dynamic Year Filter (Extract years from semester strings like "AY 2025-2026")
+                    var years = _currentGrades
+                        .Select(g => g.Semester.Split(' ').Last())
+                        .Distinct()
+                        .OrderByDescending(y => y)
+                        .ToList();
+
+                    cmbYearFilter.Items.Clear();
+                    cmbYearFilter.Items.Add("All Years");
+                    foreach (var year in years) cmbYearFilter.Items.Add(year);
+
+                    cmbYearFilter.SelectedIndex = 0;
+                    cmbSemFilter.SelectedIndex = 0; // Default to "All Semesters"
+
+                    RenderGradesTable();
+                }
+                else
+                {
+                    pnlStudentInfo.Visible = false;
                     MessageBox.Show($"No student found matching \"{query}\".",
                         "Not found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    _currentGrades.Clear();
                     ShowSearchPrompt();
-                    return;
                 }
-
-                LoadStudentGrades(db);
             }
             catch (Exception ex)
             {
@@ -135,8 +163,14 @@ namespace UniConnect
             }
         }
 
+        private void Filter_Changed(object sender, EventArgs e)
+        {
+            // Re-render the grid whenever a dropdown value changes
+            RenderGradesTable();
+        }
+
         // =====================================================================
-        // GRADES TABLE
+        // GRADES TABLE RENDERING & STYLING
         // =====================================================================
 
         private void StyleGradesGrid()
@@ -145,235 +179,154 @@ namespace UniConnect
             dgvGrades.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(123, 31, 49);
             dgvGrades.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
             dgvGrades.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            dgvGrades.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
-            dgvGrades.ColumnHeadersDefaultCellStyle.Padding = new Padding(8, 0, 0, 0);
             dgvGrades.ColumnHeadersDefaultCellStyle.SelectionBackColor = Color.FromArgb(123, 31, 49);
-            dgvGrades.ColumnHeadersDefaultCellStyle.SelectionForeColor = Color.White;
 
             dgvGrades.DefaultCellStyle.Font = new Font("Segoe UI", 9F);
-            dgvGrades.DefaultCellStyle.ForeColor = Color.FromArgb(33, 33, 33);
             dgvGrades.DefaultCellStyle.SelectionBackColor = Color.FromArgb(252, 232, 237);
             dgvGrades.DefaultCellStyle.SelectionForeColor = Color.FromArgb(33, 33, 33);
-            dgvGrades.DefaultCellStyle.Padding = new Padding(8, 0, 0, 0);
             dgvGrades.GridColor = Color.FromArgb(230, 230, 230);
-            dgvGrades.RowsDefaultCellStyle.BackColor = Color.White;
-            dgvGrades.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(250, 250, 250);
+            dgvGrades.RowTemplate.Height = 42;
 
             dgvGrades.Columns.Clear();
 
             // Read-only info columns
-            var colCode = new DataGridViewTextBoxColumn { Name = "SubjectCode", HeaderText = "Code", Width = 70, ReadOnly = true };
-            var colName = new DataGridViewTextBoxColumn { Name = "SubjectName", HeaderText = "Subject", Width = 220, ReadOnly = true };
-            var colUnits = new DataGridViewTextBoxColumn { Name = "Units", HeaderText = "Units", Width = 50, ReadOnly = true };
-            var colCurrent = new DataGridViewTextBoxColumn { Name = "CurrentGrade", HeaderText = "Current", Width = 70, ReadOnly = true };
-            var colStatus = new DataGridViewTextBoxColumn { Name = "Status", HeaderText = "Status", Width = 70, ReadOnly = true };
+            dgvGrades.Columns.Add(new DataGridViewTextBoxColumn { Name = "Code", HeaderText = "Code", Width = 65, ReadOnly = true });
+            dgvGrades.Columns.Add(new DataGridViewTextBoxColumn { Name = "Subject", HeaderText = "Subject", Width = 210, ReadOnly = true });
+            dgvGrades.Columns.Add(new DataGridViewTextBoxColumn { Name = "Units", HeaderText = "Units", Width = 45, ReadOnly = true });
+            dgvGrades.Columns.Add(new DataGridViewTextBoxColumn { Name = "Current", HeaderText = "Current", Width = 60, ReadOnly = true });
+            dgvGrades.Columns.Add(new DataGridViewTextBoxColumn { Name = "Status", HeaderText = "Status", Width = 75, ReadOnly = true });
 
-            // Editable input column
-            var colNew = new DataGridViewTextBoxColumn
-            {
-                Name = "NewGrade",
-                HeaderText = "New Grade",
-                Width = 90,
-                ReadOnly = false
-            };
-            colNew.DefaultCellStyle.BackColor = Color.FromArgb(252, 232, 237);
-            colNew.DefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            // 1. "New Grade" Input Column (Styled to look like a Textbox)
+            var colNew = new DataGridViewTextBoxColumn { Name = "NewGrade", HeaderText = "New Grade", Width = 85 };
+            colNew.DefaultCellStyle.BackColor = Color.White;
+            colNew.DefaultCellStyle.Padding = new Padding(5);
+            dgvGrades.Columns.Add(colNew);
 
-            // Per-row "Save" button
+            // 2. Action Column - SAVE (Always visible, matching web portal side)
             var colSave = new DataGridViewButtonColumn
             {
                 Name = "SaveBtn",
-                HeaderText = "",
+                HeaderText = "Actions", // Label on top
                 Text = "Save",
                 UseColumnTextForButtonValue = true,
-                Width = 70,
+                Width = 65,
                 FlatStyle = FlatStyle.Flat
             };
             colSave.DefaultCellStyle.BackColor = Color.FromArgb(33, 33, 33);
             colSave.DefaultCellStyle.ForeColor = Color.White;
-            colSave.DefaultCellStyle.SelectionBackColor = Color.FromArgb(33, 33, 33);
-            colSave.DefaultCellStyle.SelectionForeColor = Color.White;
-            colSave.DefaultCellStyle.Font = new Font("Segoe UI", 8.5F, FontStyle.Bold);
+            dgvGrades.Columns.Add(colSave);
 
-            dgvGrades.Columns.AddRange(colCode, colName, colUnits, colCurrent, colStatus, colNew, colSave);
+            // 3. Action Column - REMOVE (Sets back to Pending)
+            var colRemove = new DataGridViewButtonColumn
+            {
+                Name = "RemoveBtn",
+                HeaderText = "",
+                Text = "Remove",
+                UseColumnTextForButtonValue = true,
+                Width = 70,
+                FlatStyle = FlatStyle.Flat
+            };
+            colRemove.DefaultCellStyle.BackColor = Color.White;
+            colRemove.DefaultCellStyle.ForeColor = Color.FromArgb(220, 38, 38);
+            dgvGrades.Columns.Add(colRemove);
 
-            // Hook the cell-click handler ONCE
-            dgvGrades.CellClick -= dgvGrades_CellClick;
-            dgvGrades.CellClick += dgvGrades_CellClick;
+            // Hook the cell-click handler
+            dgvGrades.CellContentClick -= dgvGrades_CellContentClick;
+            dgvGrades.CellContentClick += dgvGrades_CellContentClick;
         }
 
-        private void LoadStudentGrades(DatabaseHelper db)
+        private void RenderGradesTable()
         {
             RemoveSearchPrompt();
-            dgvGrades.Visible = true;
             dgvGrades.Rows.Clear();
+            dgvGrades.Visible = true;
 
-            // Load this student's grades (all semesters — admin needs to see the whole picture)
-            _currentGrades = db.GetStudentGrades(_currentStudent.StudentId);
+            string selYear = cmbYearFilter.SelectedItem?.ToString();
+            string selSem = cmbSemFilter.SelectedItem?.ToString();
 
-            if (_currentGrades.Count == 0)
+            // Filtering logic matching web portal's renderGradesTable()
+            var filtered = _currentGrades.Where(g => {
+                bool yearMatch = selYear == "All Years" || g.Semester.Contains(selYear);
+                bool semMatch = selSem == "All Semesters" || g.Semester.StartsWith(selSem);
+                return yearMatch && semMatch;
+            }).ToList();
+
+            if (filtered.Count == 0)
             {
-                ShowSearchPrompt($"{_currentStudent.FullName} has no grade records yet.");
+                ShowSearchPrompt("No enrolled subjects match the selected filters.");
                 return;
             }
 
-            foreach (var g in _currentGrades)
+            foreach (var g in filtered)
             {
-                string currentGradeText = g.GradeValue.HasValue
-                    ? g.GradeValue.Value.ToString("0.00")
-                    : "—";
-
                 int rowIndex = dgvGrades.Rows.Add(
                     g.SubjectCode,
                     g.SubjectName,
                     g.Units,
-                    currentGradeText,
+                    g.GradeValue.HasValue ? g.GradeValue.Value.ToString("0.00") : "—",
                     g.Status,
-                    "",                 // empty editable column
-                    "Save");
+                    "",
+                    "Save",
+                    "Remove"
+                );
 
-                // Color-code the Status column
+                // Dynamic Status Coloring
                 var statusCell = dgvGrades.Rows[rowIndex].Cells["Status"];
-                if (g.Status == "Passed")
-                    statusCell.Style.ForeColor = Color.FromArgb(34, 139, 34);
-                else if (g.Status == "Failed")
-                    statusCell.Style.ForeColor = Color.FromArgb(220, 38, 38);
-                else
-                    statusCell.Style.ForeColor = Color.FromArgb(217, 119, 6);
+                if (g.Status == "Passed") statusCell.Style.ForeColor = Color.FromArgb(34, 139, 34);
+                else if (g.Status == "Failed") statusCell.Style.ForeColor = Color.FromArgb(220, 38, 38);
+                else statusCell.Style.ForeColor = Color.FromArgb(217, 119, 6);
             }
 
             dgvGrades.ClearSelection();
-            dgvGrades.CurrentCell = null;
-        }
-
-        private void ShowSearchPrompt(string customMessage = null)
-        {
-            // Remove any existing prompt label
-            foreach (var c in pnlGrades.Controls.Find("lblPrompt", false))
-                pnlGrades.Controls.Remove(c);
-
-            dgvGrades.Visible = false;
-
-            Label lbl = new Label
-            {
-                Name = "lblPrompt",
-                Text = customMessage ??
-                    "Search for a student to view and edit their grades",
-                Font = new Font("Segoe UI", 10F),
-                ForeColor = Color.FromArgb(160, 160, 160),
-                Location = dgvGrades.Location,
-                Size = dgvGrades.Size,
-                TextAlign = ContentAlignment.MiddleCenter,
-                BackColor = Color.White
-            };
-            pnlGrades.Controls.Add(lbl);
-        }
-
-        private void RemoveSearchPrompt()
-        {
-            foreach (var c in pnlGrades.Controls.Find("lblPrompt", false))
-                pnlGrades.Controls.Remove(c);
         }
 
         // =====================================================================
-        // SAVE A SINGLE ROW
+        // BUTTON ACTIONS: SAVE & REMOVE (Mirrors PHP API logic)
         // =====================================================================
 
-        private void dgvGrades_CellClick(object sender, DataGridViewCellEventArgs e)
+        private void dgvGrades_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0) return;
-            if (dgvGrades.Columns[e.ColumnIndex].Name != "SaveBtn") return;
-            if (_currentStudent == null) return;
-
+            string colName = dgvGrades.Columns[e.ColumnIndex].Name;
             DataGridViewRow row = dgvGrades.Rows[e.RowIndex];
-            Grade target = _currentGrades[e.RowIndex];   // matches by index since they're built in order
 
-            string newGradeRaw = (row.Cells["NewGrade"].Value ?? "").ToString().Trim();
+            string code = row.Cells["Code"].Value.ToString();
+            Grade target = _currentGrades.First(g => g.SubjectCode == code);
 
-            if (string.IsNullOrWhiteSpace(newGradeRaw))
-            {
-                MessageBox.Show("Enter a new grade in the highlighted cell first.",
-                    "No grade entered", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            // Parse + validate
-            if (!decimal.TryParse(newGradeRaw, out decimal newGrade))
-            {
-                MessageBox.Show("That's not a valid number. Use Philippine grading like 1.00, 1.25, 2.50, etc.",
-                    "Invalid input", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            if (newGrade < 1.00m || newGrade > 5.00m)
-            {
-                MessageBox.Show("Grade must be between 1.00 and 5.00 (Philippine grading scale).",
-                    "Out of range", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            // Derive status from grade (3.00 and below = Passed)
-            string newStatus = newGrade <= 3.00m ? "Passed" : "Failed";
-
-            // Confirm
-            string confirm = $"Change {target.SubjectCode} ({target.SubjectName}) " +
-                             $"for {_currentStudent.FullName}?\n\n" +
-                             $"Current grade: {(target.GradeValue.HasValue ? target.GradeValue.Value.ToString("0.00") : "—")} ({target.Status})\n" +
-                             $"New grade:     {newGrade:0.00} ({newStatus})";
-
-            if (MessageBox.Show(confirm, "Confirm change",
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                return;
-
-            // Build the audit log details message
-            string oldGradeText = target.GradeValue.HasValue
-                ? target.GradeValue.Value.ToString("0.00")
-                : "no grade";
-            string details = $"Updated {target.SubjectCode} for {_currentStudent.StudentId} ({_currentStudent.FullName}): " +
-                             $"{oldGradeText} → {newGrade:0.00} ({newStatus})";
-
-            // Save (transactional: grade + audit log together)
             DatabaseHelper db = new DatabaseHelper();
-            try
+            string adminId = Session.CurrentAdmin.AdminId;
+
+            // --- HANDLE SAVE ---
+            if (colName == "SaveBtn")
             {
-                db.UpdateGradeWithAudit(
-                    studentId: _currentStudent.StudentId,
-                    subjectCode: target.SubjectCode,
-                    newGrade: newGrade,
-                    newStatus: newStatus,
-                    semester: target.Semester,
-                    adminId: Session.CurrentAdmin.AdminId,
-                    detailsForLog: details);
+                string input = (row.Cells["NewGrade"].Value ?? "").ToString().Trim();
+                if (decimal.TryParse(input, out decimal newGrade) && newGrade >= 1.0m && newGrade <= 5.0m)
+                {
+                    string status = newGrade <= 3.0m ? "Passed" : "Failed";
+                    string log = $"Updated {target.SubjectCode} for {target.StudentId}: {target.GradeValue ?? 0} -> {newGrade}";
 
-                // Update the row in-place so the UI reflects the new state
-                row.Cells["CurrentGrade"].Value = newGrade.ToString("0.00");
-                row.Cells["Status"].Value = newStatus;
-                row.Cells["NewGrade"].Value = "";
-
-                var statusCell = row.Cells["Status"];
-                statusCell.Style.ForeColor = newStatus == "Passed"
-                    ? Color.FromArgb(34, 139, 34)
-                    : Color.FromArgb(220, 38, 38);
-
-                // Update our in-memory cache too so subsequent saves compare against the new value
-                target.GradeValue = newGrade;
-                target.Status = newStatus;
-
-                // Refresh sidebar
-                RefreshRecentChanges();
-
-                MessageBox.Show("Grade updated and logged.",
-                    "Saved", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    db.UpdateGradeWithAudit(target.StudentId, target.SubjectCode, newGrade, status, target.Semester, adminId, log); //
+                    MessageBox.Show("Grade saved successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    btnSearch_Click(null, null); // Refresh list
+                }
+                else { MessageBox.Show("Enter a valid grade (1.00 to 5.00).", "Invalid Input", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
             }
-            catch (Exception ex)
+
+            // --- HANDLE REMOVE (Set to Pending) ---
+            if (colName == "RemoveBtn")
             {
-                MessageBox.Show("Could not save grade.\n\n" + ex.Message,
-                    "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                if (MessageBox.Show($"Remove grade for {target.SubjectCode}? This will set it to Pending.", "Confirm Removal", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                {
+                    string log = $"Removed grade for {target.SubjectCode} for {target.StudentId} (Was: {target.GradeValue})";
+                    db.UpdateGradeWithAudit(target.StudentId, target.SubjectCode, null, "Pending", target.Semester, adminId, log); //
+                    MessageBox.Show("Grade removed and set to Pending.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    btnSearch_Click(null, null); // Refresh list
+                }
             }
         }
 
         // =====================================================================
-        // RECENT CHANGES SIDEBAR
+        // SIDEBAR RECENT CHANGES & NAVIGATION
         // =====================================================================
 
         private void RefreshRecentChanges()
@@ -383,38 +336,19 @@ namespace UniConnect
             pnlChangesList.AutoScroll = false;
             pnlChangesList.VerticalScroll.Value = 0;
 
-            List<AuditLog> logs;
-            try
-            {
-                logs = db.GetRecentGradeAuditLogs(limit: 10);
-            }
-            catch
-            {
-                logs = new List<AuditLog>();
-            }
+            var logs = db.GetRecentGradeAuditLogs(limit: 10); //
 
-            if (logs.Count == 0)
+            if (!logs.Any())
             {
-                var lblEmpty = new Label
-                {
-                    Text = "No recent changes",
-                    Font = new Font("Segoe UI", 9F),
-                    ForeColor = Color.FromArgb(160, 160, 160),
-                    Location = new Point(0, 0),
-                    Size = pnlChangesList.Size,
-                    TextAlign = ContentAlignment.MiddleCenter,
-                    BackColor = Color.Transparent
-                };
+                var lblEmpty = new Label { Text = "No recent changes", ForeColor = Color.Gray, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleCenter };
                 pnlChangesList.Controls.Add(lblEmpty);
                 return;
             }
 
             int y = 0;
-            int itemWidth = pnlChangesList.Width - 5;
-
             foreach (var log in logs)
             {
-                Panel item = BuildChangeItem(log, y, itemWidth);
+                Panel item = BuildChangeItem(log, y, pnlChangesList.Width - 5);
                 pnlChangesList.Controls.Add(item);
                 y += item.Height + 6;
             }
@@ -424,117 +358,55 @@ namespace UniConnect
 
         private Panel BuildChangeItem(AuditLog log, int y, int width)
         {
-            Panel item = new Panel
-            {
-                BackColor = Color.Transparent,
-                Location = new Point(0, y),
-                Size = new Size(width, 58),
-                BorderStyle = BorderStyle.None
-            };
-
-            // Green left dot
-            Panel dot = new Panel
-            {
-                BackColor = Color.FromArgb(34, 139, 34),
-                Location = new Point(0, 8),
-                Size = new Size(4, 42)
-            };
-            item.Controls.Add(dot);
-
-            var lblAction = new Label
-            {
-                Text = log.ActionType ?? "Grade Updated",
-                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(33, 33, 33),
-                Location = new Point(10, 4),
-                Size = new Size(width - 15, 16),
-                AutoEllipsis = true,
-                BackColor = Color.Transparent
-            };
-            item.Controls.Add(lblAction);
-
-            var lblDetails = new Label
-            {
-                Text = log.Details ?? "",
-                Font = new Font("Segoe UI", 7.5F),
-                ForeColor = Color.FromArgb(80, 80, 80),
-                Location = new Point(10, 21),
-                Size = new Size(width - 15, 22),
-                AutoEllipsis = true,
-                BackColor = Color.Transparent
-            };
-            item.Controls.Add(lblDetails);
-
-            string footer = (log.PerformedByName ?? log.PerformedBy ?? "—")
-                + "  •  " + HumanizeTimeAgo(log.Timestamp);
-            var lblFooter = new Label
-            {
-                Text = footer,
-                Font = new Font("Segoe UI", 7.5F),
-                ForeColor = Color.FromArgb(160, 160, 160),
-                Location = new Point(10, 42),
-                Size = new Size(width - 15, 14),
-                AutoEllipsis = true,
-                BackColor = Color.Transparent
-            };
-            item.Controls.Add(lblFooter);
-
-            return item;
+            Panel p = new Panel { Location = new Point(0, y), Size = new Size(width, 58), BackColor = Color.Transparent };
+            p.Controls.Add(new Panel { BackColor = Color.FromArgb(34, 139, 34), Location = new Point(0, 8), Size = new Size(4, 42) });
+            p.Controls.Add(new Label { Text = log.ActionType, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold), Location = new Point(10, 4), Size = new Size(width - 15, 16) });
+            p.Controls.Add(new Label { Text = log.Details, Font = new Font("Segoe UI", 7.5F), Location = new Point(10, 21), Size = new Size(width - 15, 22), AutoEllipsis = true });
+            p.Controls.Add(new Label { Text = $"{log.PerformedByName} • {HumanizeTimeAgo(log.Timestamp)}", Font = new Font("Segoe UI", 7.5F), ForeColor = Color.Gray, Location = new Point(10, 42), Size = new Size(width - 15, 14) });
+            return p;
         }
 
         private string HumanizeTimeAgo(DateTime when)
         {
             TimeSpan diff = DateTime.Now - when;
-            if (diff.TotalSeconds < 60) return "Just now";
             if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
             if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
-            if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}d ago";
             return when.ToString("MMM d");
         }
 
+        private void ShowSearchPrompt(string msg = null)
+        {
+            foreach (var c in pnlGrades.Controls.Find("lblPrompt", false)) pnlGrades.Controls.Remove(c);
+            dgvGrades.Visible = false;
+            Label lbl = new Label { Name = "lblPrompt", Text = msg ?? "Search for a student to view and edit their grades", Font = new Font("Segoe UI", 10F), ForeColor = Color.Gray, Location = dgvGrades.Location, Size = dgvGrades.Size, TextAlign = ContentAlignment.MiddleCenter, BackColor = Color.White };
+            pnlGrades.Controls.Add(lbl);
+        }
+
+        private void RemoveSearchPrompt() { foreach (var c in pnlGrades.Controls.Find("lblPrompt", false)) pnlGrades.Controls.Remove(c); }
+
         // =====================================================================
-        // SIDEBAR NAVIGATION
+        // NAVIGATION & LOGOUT
         // =====================================================================
 
-        private void btnNavDashboard_Click(object sender, EventArgs e)
+        private void btnNavDashboard_Click(object sender, EventArgs e) { new frmAdminDashboard().Show(); this.Close(); }
+        private void btnNavStudents_Click(object sender, EventArgs e) { MessageBox.Show("Manage Students module coming soon."); }
+        private void btnNavEncodeGrades_Click(object sender, EventArgs e) { /* Already here */ }
+        private void btnNavEnrollments_Click(object sender, EventArgs e) { MessageBox.Show("Manage Enrollments module coming soon."); }
+        private void btnNavPostAnnouncement_Click(object sender, EventArgs e) { new frmPostAnnouncement().Show(); this.Close(); }
+        private void btnNavReports_Click(object sender, EventArgs e) { MessageBox.Show("Reports module coming soon."); }
+        private void btnNavAuditLogs_Click(object sender, EventArgs e) { MessageBox.Show("Full Audit Logs module coming soon."); }
+
+        private void btnLogout_Click(object sender, EventArgs e)
         {
-            new frmAdminDashboard().Show();
+            if (MessageBox.Show("Are you sure you want to sign out?", "Logout", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                PerformLogout();
+        }
+
+        private void PerformLogout()
+        {
+            Session.Clear(); //
+            new frmAdminLogin().Show();
             this.Close();
-        }
-
-        private void btnNavStudents_Click(object sender, EventArgs e)
-        {
-            MessageBox.Show("Manage Students — not part of this build phase.",
-                "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-
-        private void btnNavEncodeGrades_Click(object sender, EventArgs e)
-        {
-            // Already on Encode Grades
-        }
-
-        private void btnNavEnrollments_Click(object sender, EventArgs e)
-        {
-            MessageBox.Show("Manage Enrollments — not part of this build phase.",
-                "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-
-        private void btnNavPostAnnouncement_Click(object sender, EventArgs e)
-        {
-            new frmPostAnnouncement().Show();
-            this.Close();
-        }
-
-        private void btnNavReports_Click(object sender, EventArgs e)
-        {
-            MessageBox.Show("Generate Reports — not part of this build phase.",
-                "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-
-        private void btnNavAuditLogs_Click(object sender, EventArgs e)
-        {
-            MessageBox.Show("Audit Logs (full view) — not part of this build phase.",
-                "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
 }

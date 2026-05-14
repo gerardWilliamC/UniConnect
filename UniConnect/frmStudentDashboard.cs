@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using UniConnect.Database;
 using UniConnect.Models;
@@ -39,6 +40,9 @@ namespace UniConnect
 
                 // Top bar — semester pill
                 lblSemPill.Text = me.Semester;
+
+                // Update Heading to Notifications
+                lblAnnTitle.Text = "Notifications";
 
                 // GWA stat card
                 decimal? gwa = db.GetStudentGWA(me.StudentId, me.Semester);
@@ -82,8 +86,8 @@ namespace UniConnect
                 StyleGradesPreviewGrid();
                 LoadGradesPreview(db, me);
 
-                // Announcements preview
-                LoadAnnouncementsPreview(db);
+                // Unified Notifications (Announcements + Grade Updates)
+                LoadNotifications(db, me);
             }
             catch (Exception ex)
             {
@@ -132,7 +136,6 @@ namespace UniConnect
 
         private void LoadGradesPreview(DatabaseHelper db, Student me)
         {
-            // Remove old empty-state label if any
             foreach (var c in pnlGrades.Controls.Find("lblEmptyGradesPreview", false))
                 pnlGrades.Controls.Remove(c);
 
@@ -140,7 +143,6 @@ namespace UniConnect
 
             List<Grade> grades = db.GetStudentGrades(me.StudentId, me.Semester);
 
-            // Show only top 5 in dashboard preview
             int rowsToShow = Math.Min(grades.Count, 5);
             for (int i = 0; i < rowsToShow; i++)
             {
@@ -174,88 +176,158 @@ namespace UniConnect
             dgvGrades.CurrentCell = null;
         }
 
-        private void LoadAnnouncementsPreview(DatabaseHelper db)
+        // =====================================================================
+        // UNIFIED NOTIFICATIONS LOGIC
+        // =====================================================================
+
+        private void LoadNotifications(DatabaseHelper db, Student me)
         {
-            // Remove old empty-state label if any
-            foreach (var c in pnlAnnouncements.Controls.Find("lblEmptyAnnouncementsPreview", false))
-                pnlAnnouncements.Controls.Remove(c);
-
             pnlAnnList.Controls.Clear();
+            var notifications = new List<NotificationItem>();
 
-            List<Announcement> announcements = db.GetAnnouncements(
-                "Students", limit: 3, studentId: Session.CurrentStudent.StudentId);
+            // 1. Fetch Announcements
+            var announcements = db.GetAnnouncements("Students", limit: 5, studentId: me.StudentId);
+            foreach (var a in announcements)
+            {
+                notifications.Add(new NotificationItem
+                {
+                    Title = a.Title,
+                    Type = "Announcement",
+                    Timestamp = a.PostedAt,
+                    Content = a.Content
+                });
+            }
 
-            if (announcements.Count == 0)
+            // 2. Fetch Grade Updates
+            var grades = db.GetStudentGrades(me.StudentId, me.Semester);
+            foreach (var g in grades)
+            {
+                // Only add to feed if a grade value has actually been encoded
+                if (g.GradeValue.HasValue)
+                {
+                    notifications.Add(new NotificationItem
+                    {
+                        Title = $"Grade Updated: {g.SubjectCode}",
+                        Type = "Grade Update",
+                        Timestamp = g.UpdatedAt,
+                        Content = $"New Status: {g.Status}"
+                    });
+                }
+            }
+
+            // 3. Combine and Sort by Newest First
+            var sortedFeed = notifications.OrderByDescending(n => n.Timestamp).Take(5).ToList();
+
+            if (sortedFeed.Count == 0)
             {
                 var lbl = new Label
                 {
-                    Name = "lblEmptyAnnouncementsPreview",
-                    Text = "No announcements yet",
+                    Text = "No recent notifications",
                     Font = new Font("Segoe UI", 10F),
                     ForeColor = Color.FromArgb(160, 160, 160),
                     Location = new Point(0, 0),
                     Size = pnlAnnList.Size,
-                    TextAlign = ContentAlignment.MiddleCenter,
-                    BackColor = Color.White
+                    TextAlign = ContentAlignment.MiddleCenter
                 };
                 pnlAnnList.Controls.Add(lbl);
                 return;
             }
 
+            // 4. Render to UI
             int y = 0;
-            foreach (var a in announcements)
+            foreach (var item in sortedFeed)
             {
-                var card = new Panel
-                {
-                    BackColor = Color.White,
-                    Location = new Point(0, y),
-                    Size = new Size(pnlAnnList.Width - 5, 75),
-                    BorderStyle = BorderStyle.None
-                };
-
-                var lblTitle = new Label
-                {
-                    Text = a.Title,
-                    Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
-                    ForeColor = Color.FromArgb(123, 31, 49),
-                    Location = new Point(5, 4),
-                    Size = new Size(card.Width - 10, 20),
-                    AutoEllipsis = true
-                };
-
-                var lblMeta = new Label
-                {
-                    Text = a.PostedAt.ToString("MMM d, yyyy"),
-                    Font = new Font("Segoe UI", 8F),
-                    ForeColor = Color.FromArgb(160, 160, 160),
-                    Location = new Point(5, 26),
-                    Size = new Size(card.Width - 10, 14)
-                };
-
-                var lblBody = new Label
-                {
-                    Text = a.Content,
-                    Font = new Font("Segoe UI", 8.5F),
-                    ForeColor = Color.FromArgb(80, 80, 80),
-                    Location = new Point(5, 44),
-                    Size = new Size(card.Width - 10, 28),
-                    AutoEllipsis = true
-                };
-
-                card.Controls.Add(lblTitle);
-                card.Controls.Add(lblMeta);
-                card.Controls.Add(lblBody);
+                Panel card = BuildNotificationCard(item, y);
                 pnlAnnList.Controls.Add(card);
-
                 y += 80;
             }
         }
 
-        // ===== Sidebar nav events =====
-        private void btnNavDashboard_Click(object sender, EventArgs e)
+        private Panel BuildNotificationCard(NotificationItem item, int y)
         {
-            // Already on Dashboard
+            var card = new Panel
+            {
+                BackColor = Color.White,
+                Location = new Point(0, y),
+                Size = new Size(pnlAnnList.Width - 5, 75),
+                BorderStyle = BorderStyle.None,
+                Cursor = Cursors.Hand, // Visual cue for interactivity
+                Tag = item // Store data for the click handler
+            };
+
+            card.Click += NotificationCard_Click; // Register click event
+
+            // Colors match the web portal logic
+            Color typeColor = item.Type == "Grade Update"
+                ? Color.FromArgb(16, 185, 129) // Green
+                : Color.FromArgb(139, 21, 56); // Brand Primary Red
+
+            var lblTitle = new Label
+            {
+                Text = item.Title,
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                ForeColor = typeColor,
+                Location = new Point(5, 4),
+                Size = new Size(card.Width - 10, 20),
+                AutoEllipsis = true
+            };
+
+            var lblMeta = new Label
+            {
+                Text = $"{item.Type} • {item.Timestamp:MMM d, yyyy}",
+                Font = new Font("Segoe UI", 8F),
+                ForeColor = Color.FromArgb(160, 160, 160),
+                Location = new Point(5, 26),
+                Size = new Size(card.Width - 10, 14)
+            };
+
+            var lblBody = new Label
+            {
+                Text = item.Content,
+                Font = new Font("Segoe UI", 8.5F),
+                ForeColor = Color.FromArgb(80, 80, 80),
+                Location = new Point(5, 44),
+                Size = new Size(card.Width - 10, 28),
+                AutoEllipsis = true
+            };
+
+            card.Controls.Add(lblTitle);
+            card.Controls.Add(lblMeta);
+            card.Controls.Add(lblBody);
+
+            // Ensure clicking the text also triggers the card click
+            foreach (Control child in card.Controls)
+            {
+                child.Cursor = Cursors.Hand;
+                child.Click += (s, e) => NotificationCard_Click(card, EventArgs.Empty);
+            }
+
+            return card;
         }
+
+        // =====================================================================
+        // NEW CLICK HANDLER - NAVIGATION LOGIC
+        // =====================================================================
+
+        private void NotificationCard_Click(object sender, EventArgs e)
+        {
+            Panel card = sender as Panel;
+            if (card == null || card.Tag == null) return;
+
+            NotificationItem item = (NotificationItem)card.Tag;
+
+            if (item.Type == "Grade Update")
+            {
+                btnNavGrades_Click(null, null); // Redirect to My Grades tab
+            }
+            else if (item.Type == "Announcement")
+            {
+                btnNavAnnouncements_Click(null, null); // Redirect to Announcements tab
+            }
+        }
+
+        // ===== Sidebar nav events =====
+        private void btnNavDashboard_Click(object sender, EventArgs e) { }
 
         private void btnNavGrades_Click(object sender, EventArgs e)
         {
@@ -295,5 +367,32 @@ namespace UniConnect
             f.Show();
             this.Close();
         }
+
+        private void btnLogout_Click(object sender, EventArgs e)
+        {
+            DialogResult result = MessageBox.Show("Are you sure you want to sign out?",
+                "Logout", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+            if (result == DialogResult.Yes)
+            {
+                PerformLogout();
+            }
+        }
+
+        private void PerformLogout()
+        {
+            Session.Clear();
+            new frmStudentLogin().Show();
+            this.Close();
+        }
+    }
+
+    // Helper class for unified feed
+    public class NotificationItem
+    {
+        public string Title { get; set; }
+        public string Type { get; set; } // "Announcement" or "Grade Update"
+        public DateTime Timestamp { get; set; }
+        public string Content { get; set; }
     }
 }

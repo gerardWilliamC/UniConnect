@@ -20,6 +20,7 @@
         private System.Windows.Forms.PictureBox pbUserAvatar;
         private System.Windows.Forms.Label lblUserName;
         private System.Windows.Forms.Label lblUserId;
+        private System.Windows.Forms.Button btnLogout; // Added Logout
 
         // Main content
         private System.Windows.Forms.Panel pnlMain;
@@ -31,6 +32,13 @@
         private System.Windows.Forms.Panel pnlSearchRow;
         private System.Windows.Forms.TextBox txtSearch;
         private System.Windows.Forms.Button btnSearch;
+
+        // Student Info & Filters (Added)
+        private System.Windows.Forms.Panel pnlStudentInfo;
+        private System.Windows.Forms.Label lblStudentNameHeader;
+        private System.Windows.Forms.Label lblStudentIdHeader;
+        private System.Windows.Forms.ComboBox cmbYearFilter;
+        private System.Windows.Forms.ComboBox cmbSemFilter;
 
         // Grades editor table
         private System.Windows.Forms.Panel pnlGrades;
@@ -67,6 +75,7 @@
             this.pbUserAvatar = new System.Windows.Forms.PictureBox();
             this.lblUserName = new System.Windows.Forms.Label();
             this.lblUserId = new System.Windows.Forms.Label();
+            this.btnLogout = new System.Windows.Forms.Button();
             this.pnlMain = new System.Windows.Forms.Panel();
             this.pnlTopBar = new System.Windows.Forms.Panel();
             this.lblPageTitle = new System.Windows.Forms.Label();
@@ -74,6 +83,11 @@
             this.pnlSearchRow = new System.Windows.Forms.Panel();
             this.txtSearch = new System.Windows.Forms.TextBox();
             this.btnSearch = new System.Windows.Forms.Button();
+            this.pnlStudentInfo = new System.Windows.Forms.Panel();
+            this.lblStudentNameHeader = new System.Windows.Forms.Label();
+            this.lblStudentIdHeader = new System.Windows.Forms.Label();
+            this.cmbYearFilter = new System.Windows.Forms.ComboBox();
+            this.cmbSemFilter = new System.Windows.Forms.ComboBox();
             this.pnlGrades = new System.Windows.Forms.Panel();
             this.dgvGrades = new System.Windows.Forms.DataGridView();
             this.pnlRecentChanges = new System.Windows.Forms.Panel();
@@ -87,6 +101,7 @@
             this.pnlMain.SuspendLayout();
             this.pnlTopBar.SuspendLayout();
             this.pnlSearchRow.SuspendLayout();
+            this.pnlStudentInfo.SuspendLayout();
             this.pnlGrades.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvGrades)).BeginInit();
             this.pnlRecentChanges.SuspendLayout();
@@ -192,7 +207,7 @@
             this.btnNavStudents.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnNavStudents.Click += new System.EventHandler(this.btnNavStudents_Click);
             // 
-            // btnNavEncodeGrades (ACTIVE)
+            // btnNavEncodeGrades
             // 
             this.btnNavEncodeGrades.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(94)))), ((int)(((byte)(23)))), ((int)(((byte)(38)))));
             this.btnNavEncodeGrades.FlatAppearance.BorderSize = 0;
@@ -283,6 +298,7 @@
             this.pnlSidebarUser.Controls.Add(this.pbUserAvatar);
             this.pnlSidebarUser.Controls.Add(this.lblUserName);
             this.pnlSidebarUser.Controls.Add(this.lblUserId);
+            this.pnlSidebarUser.Controls.Add(this.btnLogout);
             this.pnlSidebarUser.Location = new System.Drawing.Point(15, 640);
             this.pnlSidebarUser.Name = "pnlSidebarUser";
             this.pnlSidebarUser.Size = new System.Drawing.Size(190, 60);
@@ -305,7 +321,7 @@
             this.lblUserName.ForeColor = System.Drawing.Color.White;
             this.lblUserName.Location = new System.Drawing.Point(50, 12);
             this.lblUserName.Name = "lblUserName";
-            this.lblUserName.Size = new System.Drawing.Size(140, 18);
+            this.lblUserName.Size = new System.Drawing.Size(110, 18);
             this.lblUserName.TabIndex = 1;
             this.lblUserName.Text = "Administrator";
             // 
@@ -316,15 +332,32 @@
             this.lblUserId.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(200)))), ((int)(((byte)(200)))));
             this.lblUserId.Location = new System.Drawing.Point(50, 32);
             this.lblUserId.Name = "lblUserId";
-            this.lblUserId.Size = new System.Drawing.Size(140, 16);
+            this.lblUserId.Size = new System.Drawing.Size(110, 16);
             this.lblUserId.TabIndex = 2;
             this.lblUserId.Text = "ICT Admin";
+            // 
+            // btnLogout
+            // 
+            this.btnLogout.BackColor = System.Drawing.Color.Transparent;
+            this.btnLogout.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.btnLogout.FlatAppearance.BorderSize = 0;
+            this.btnLogout.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnLogout.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
+            this.btnLogout.ForeColor = System.Drawing.Color.White;
+            this.btnLogout.Location = new System.Drawing.Point(155, 10);
+            this.btnLogout.Name = "btnLogout";
+            this.btnLogout.Size = new System.Drawing.Size(30, 40);
+            this.btnLogout.TabIndex = 3;
+            this.btnLogout.Text = "➔";
+            this.btnLogout.UseVisualStyleBackColor = false;
+            this.btnLogout.Click += new System.EventHandler(this.btnLogout_Click);
             // 
             // pnlMain
             // 
             this.pnlMain.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(245)))), ((int)(((byte)(243)))), ((int)(((byte)(248)))));
             this.pnlMain.Controls.Add(this.pnlTopBar);
             this.pnlMain.Controls.Add(this.pnlSearchRow);
+            this.pnlMain.Controls.Add(this.pnlStudentInfo);
             this.pnlMain.Controls.Add(this.pnlGrades);
             this.pnlMain.Controls.Add(this.pnlRecentChanges);
             this.pnlMain.Controls.Add(this.pbWatermark);
@@ -403,13 +436,68 @@
             this.btnSearch.UseVisualStyleBackColor = false;
             this.btnSearch.Click += new System.EventHandler(this.btnSearch_Click);
             // 
+            // pnlStudentInfo
+            // 
+            this.pnlStudentInfo.BackColor = System.Drawing.Color.White;
+            this.pnlStudentInfo.Controls.Add(this.lblStudentNameHeader);
+            this.pnlStudentInfo.Controls.Add(this.lblStudentIdHeader);
+            this.pnlStudentInfo.Controls.Add(this.cmbYearFilter);
+            this.pnlStudentInfo.Controls.Add(this.cmbSemFilter);
+            this.pnlStudentInfo.Location = new System.Drawing.Point(30, 160);
+            this.pnlStudentInfo.Name = "pnlStudentInfo";
+            this.pnlStudentInfo.Size = new System.Drawing.Size(715, 75);
+            this.pnlStudentInfo.TabIndex = 5;
+            this.pnlStudentInfo.Visible = false;
+            // 
+            // lblStudentNameHeader
+            // 
+            this.lblStudentNameHeader.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
+            this.lblStudentNameHeader.Location = new System.Drawing.Point(20, 12);
+            this.lblStudentNameHeader.Name = "lblStudentNameHeader";
+            this.lblStudentNameHeader.Size = new System.Drawing.Size(400, 25);
+            this.lblStudentNameHeader.TabIndex = 0;
+            this.lblStudentNameHeader.Text = "Student Name";
+            // 
+            // lblStudentIdHeader
+            // 
+            this.lblStudentIdHeader.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.lblStudentIdHeader.ForeColor = System.Drawing.Color.Gray;
+            this.lblStudentIdHeader.Location = new System.Drawing.Point(20, 38);
+            this.lblStudentIdHeader.Name = "lblStudentIdHeader";
+            this.lblStudentIdHeader.Size = new System.Drawing.Size(400, 20);
+            this.lblStudentIdHeader.TabIndex = 1;
+            this.lblStudentIdHeader.Text = "ID: 2024-00001 | Program";
+            // 
+            // cmbYearFilter
+            // 
+            this.cmbYearFilter.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbYearFilter.Location = new System.Drawing.Point(440, 25);
+            this.cmbYearFilter.Name = "cmbYearFilter";
+            this.cmbYearFilter.Size = new System.Drawing.Size(125, 23);
+            this.cmbYearFilter.TabIndex = 2;
+            this.cmbYearFilter.SelectedIndexChanged += new System.EventHandler(this.Filter_Changed);
+            // 
+            // cmbSemFilter
+            // 
+            this.cmbSemFilter.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbSemFilter.Items.AddRange(new object[] {
+            "All Semesters",
+            "1st Sem",
+            "2nd Sem"});
+            this.cmbSemFilter.Location = new System.Drawing.Point(575, 25);
+            this.cmbSemFilter.Name = "cmbSemFilter";
+            this.cmbSemFilter.Size = new System.Drawing.Size(120, 23);
+            this.cmbSemFilter.TabIndex = 3;
+            this.cmbSemFilter.SelectedIndex = 0;
+            this.cmbSemFilter.SelectedIndexChanged += new System.EventHandler(this.Filter_Changed);
+            // 
             // pnlGrades
             // 
             this.pnlGrades.BackColor = System.Drawing.Color.White;
             this.pnlGrades.Controls.Add(this.dgvGrades);
-            this.pnlGrades.Location = new System.Drawing.Point(30, 165);
+            this.pnlGrades.Location = new System.Drawing.Point(30, 245);
             this.pnlGrades.Name = "pnlGrades";
-            this.pnlGrades.Size = new System.Drawing.Size(715, 495);
+            this.pnlGrades.Size = new System.Drawing.Size(715, 415);
             this.pnlGrades.TabIndex = 2;
             // 
             // dgvGrades
@@ -427,7 +515,7 @@
             this.dgvGrades.RowHeadersVisible = false;
             this.dgvGrades.RowTemplate.Height = 36;
             this.dgvGrades.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.dgvGrades.Size = new System.Drawing.Size(675, 455);
+            this.dgvGrades.Size = new System.Drawing.Size(675, 375);
             this.dgvGrades.TabIndex = 0;
             // 
             // pnlRecentChanges
@@ -492,6 +580,7 @@
             this.pnlTopBar.ResumeLayout(false);
             this.pnlSearchRow.ResumeLayout(false);
             this.pnlSearchRow.PerformLayout();
+            this.pnlStudentInfo.ResumeLayout(false);
             this.pnlGrades.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.dgvGrades)).EndInit();
             this.pnlRecentChanges.ResumeLayout(false);

@@ -57,6 +57,7 @@
 
         // Bottom-right watermark logo (NEW)
         private System.Windows.Forms.PictureBox pbWatermark;
+        private System.Windows.Forms.Button btnLogout;
 
         protected override void Dispose(bool disposing)
         {
@@ -67,6 +68,7 @@
         private void InitializeComponent()
         {
             this.pnlSidebar = new System.Windows.Forms.Panel();
+
             this.pbSidebarLogo = new System.Windows.Forms.PictureBox();
             this.lblSidebarBrand = new System.Windows.Forms.Label();
             this.lblSidebarSub = new System.Windows.Forms.Label();
@@ -77,6 +79,19 @@
             this.btnNavAnnouncements = new System.Windows.Forms.Button();
             this.btnNavProfile = new System.Windows.Forms.Button();
             this.pnlSidebarUser = new System.Windows.Forms.Panel();
+            this.btnLogout = new System.Windows.Forms.Button();
+            this.btnLogout.BackColor = System.Drawing.Color.Transparent;
+            this.btnLogout.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.btnLogout.FlatAppearance.BorderSize = 0;
+            this.btnLogout.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnLogout.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
+            this.btnLogout.ForeColor = System.Drawing.Color.White;
+            this.btnLogout.Location = new System.Drawing.Point(155, 10); // Positions it to the right
+            this.btnLogout.Name = "btnLogout";
+            this.btnLogout.Size = new System.Drawing.Size(30, 40);
+            this.btnLogout.Text = "➔"; // Matching your web portal icon
+            this.btnLogout.UseVisualStyleBackColor = false;
+            this.btnLogout.Click += new System.EventHandler(this.btnLogout_Click);
             this.pbUserAvatar = new System.Windows.Forms.PictureBox();
             this.lblUserName = new System.Windows.Forms.Label();
             this.lblUserId = new System.Windows.Forms.Label();
@@ -107,6 +122,7 @@
             this.pnlSidebar.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pbSidebarLogo)).BeginInit();
             this.pnlSidebarUser.SuspendLayout();
+
             ((System.ComponentModel.ISupportInitialize)(this.pbUserAvatar)).BeginInit();
             this.pnlMain.SuspendLayout();
             this.pnlTopBar.SuspendLayout();
@@ -132,6 +148,7 @@
             this.pnlSidebar.Controls.Add(this.btnNavAnnouncements);
             this.pnlSidebar.Controls.Add(this.btnNavProfile);
             this.pnlSidebar.Controls.Add(this.pnlSidebarUser);
+            this.pnlSidebarUser.Controls.Add(this.btnLogout);
             this.pnlSidebar.Dock = System.Windows.Forms.DockStyle.Left;
             this.pnlSidebar.Location = new System.Drawing.Point(0, 0);
             this.pnlSidebar.Name = "pnlSidebar";
@@ -579,7 +596,7 @@
             this.lblAnnTitle.Name = "lblAnnTitle";
             this.lblAnnTitle.Size = new System.Drawing.Size(200, 25);
             this.lblAnnTitle.TabIndex = 0;
-            this.lblAnnTitle.Text = "Announcements";
+            this.lblAnnTitle.Text = "Notifications";
             // 
             // pnlAnnList
             // 
