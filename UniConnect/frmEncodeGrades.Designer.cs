@@ -20,7 +20,7 @@
         private System.Windows.Forms.PictureBox pbUserAvatar;
         private System.Windows.Forms.Label lblUserName;
         private System.Windows.Forms.Label lblUserId;
-        private System.Windows.Forms.Button btnLogout; // Added Logout
+        private System.Windows.Forms.Button btnLogout;
 
         // Main content
         private System.Windows.Forms.Panel pnlMain;
@@ -33,7 +33,7 @@
         private System.Windows.Forms.TextBox txtSearch;
         private System.Windows.Forms.Button btnSearch;
 
-        // Student Info & Filters (Added)
+        // Student Info & Filters
         private System.Windows.Forms.Panel pnlStudentInfo;
         private System.Windows.Forms.Label lblStudentNameHeader;
         private System.Windows.Forms.Label lblStudentIdHeader;
@@ -44,10 +44,16 @@
         private System.Windows.Forms.Panel pnlGrades;
         private System.Windows.Forms.DataGridView dgvGrades;
 
-        // Recent changes
+        // Right Sidebar Container
         private System.Windows.Forms.Panel pnlRecentChanges;
+
+        // Recent changes controls
         private System.Windows.Forms.Label lblRecentChangesTitle;
         private System.Windows.Forms.Panel pnlChangesList;
+
+        // NEW: Pending Queue controls
+        private System.Windows.Forms.Label lblPendingTitle;
+        private System.Windows.Forms.Panel pnlPendingList;
 
         // Watermark
         private System.Windows.Forms.PictureBox pbWatermark;
@@ -93,6 +99,8 @@
             this.pnlRecentChanges = new System.Windows.Forms.Panel();
             this.lblRecentChangesTitle = new System.Windows.Forms.Label();
             this.pnlChangesList = new System.Windows.Forms.Panel();
+            this.lblPendingTitle = new System.Windows.Forms.Label();
+            this.pnlPendingList = new System.Windows.Forms.Panel();
             this.pbWatermark = new System.Windows.Forms.PictureBox();
             this.pnlSidebar.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pbSidebarLogo)).BeginInit();
@@ -127,19 +135,6 @@
             this.pnlSidebar.Name = "pnlSidebar";
             this.pnlSidebar.Size = new System.Drawing.Size(220, 720);
             this.pnlSidebar.TabIndex = 0;
-            // sidebar dividers
-            System.Windows.Forms.Panel pnlSidebarHeaderLine = new System.Windows.Forms.Panel();
-            pnlSidebarHeaderLine.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(94)))), ((int)(((byte)(23)))), ((int)(((byte)(38)))));
-            pnlSidebarHeaderLine.Location = new System.Drawing.Point(15, 80);
-            pnlSidebarHeaderLine.Size = new System.Drawing.Size(190, 1);
-            pnlSidebarHeaderLine.Name = "pnlSidebarHeaderLine";
-            this.pnlSidebar.Controls.Add(pnlSidebarHeaderLine);
-            System.Windows.Forms.Panel pnlSidebarFooterLine = new System.Windows.Forms.Panel();
-            pnlSidebarFooterLine.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(94)))), ((int)(((byte)(23)))), ((int)(((byte)(38)))));
-            pnlSidebarFooterLine.Location = new System.Drawing.Point(15, 625);
-            pnlSidebarFooterLine.Size = new System.Drawing.Size(190, 1);
-            pnlSidebarFooterLine.Name = "pnlSidebarFooterLine";
-            this.pnlSidebar.Controls.Add(pnlSidebarFooterLine);
             // 
             // pbSidebarLogo
             // 
@@ -416,7 +411,6 @@
             this.txtSearch.Font = new System.Drawing.Font("Segoe UI", 10F);
             this.txtSearch.Location = new System.Drawing.Point(20, 17);
             this.txtSearch.Name = "txtSearch";
-            this.txtSearch.Text = "";
             this.txtSearch.Size = new System.Drawing.Size(560, 25);
             this.txtSearch.TabIndex = 0;
             // 
@@ -523,6 +517,8 @@
             this.pnlRecentChanges.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(245)))), ((int)(((byte)(243)))), ((int)(((byte)(248)))));
             this.pnlRecentChanges.Controls.Add(this.lblRecentChangesTitle);
             this.pnlRecentChanges.Controls.Add(this.pnlChangesList);
+            this.pnlRecentChanges.Controls.Add(this.lblPendingTitle);
+            this.pnlRecentChanges.Controls.Add(this.pnlPendingList);
             this.pnlRecentChanges.Location = new System.Drawing.Point(760, 90);
             this.pnlRecentChanges.Name = "pnlRecentChanges";
             this.pnlRecentChanges.Size = new System.Drawing.Size(180, 485);
@@ -543,8 +539,26 @@
             this.pnlChangesList.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(245)))), ((int)(((byte)(243)))), ((int)(((byte)(248)))));
             this.pnlChangesList.Location = new System.Drawing.Point(0, 35);
             this.pnlChangesList.Name = "pnlChangesList";
-            this.pnlChangesList.Size = new System.Drawing.Size(180, 445);
+            this.pnlChangesList.Size = new System.Drawing.Size(180, 200);
             this.pnlChangesList.TabIndex = 1;
+            // 
+            // lblPendingTitle
+            // 
+            this.lblPendingTitle.Font = new System.Drawing.Font("Segoe UI", 11F, System.Drawing.FontStyle.Bold);
+            this.lblPendingTitle.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(217)))), ((int)(((byte)(119)))), ((int)(((byte)(6)))));
+            this.lblPendingTitle.Location = new System.Drawing.Point(0, 245);
+            this.lblPendingTitle.Name = "lblPendingTitle";
+            this.lblPendingTitle.Size = new System.Drawing.Size(180, 25);
+            this.lblPendingTitle.TabIndex = 2;
+            this.lblPendingTitle.Text = "Action Required";
+            // 
+            // pnlPendingList
+            // 
+            this.pnlPendingList.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(245)))), ((int)(((byte)(243)))), ((int)(((byte)(248)))));
+            this.pnlPendingList.Location = new System.Drawing.Point(0, 275);
+            this.pnlPendingList.Name = "pnlPendingList";
+            this.pnlPendingList.Size = new System.Drawing.Size(180, 210);
+            this.pnlPendingList.TabIndex = 3;
             // 
             // pbWatermark
             // 

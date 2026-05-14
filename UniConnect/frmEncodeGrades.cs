@@ -10,17 +10,9 @@ namespace UniConnect
 {
     public partial class frmEncodeGrades : Form
     {
-        // =====================================================================
-        // STATE MANAGEMENT
-        // =====================================================================
-
-        // The student currently selected (or null if no search yet)
         private Student _currentStudent = null;
-
-        // Cache of the grades currently shown — used for filtering and update detection
         private List<Grade> _currentGrades = new List<Grade>();
 
-        // Search placeholder constants for older .NET versions
         private const string SEARCH_PLACEHOLDER = "  Search by student ID or name…";
         private bool _searchPlaceholderShown = true;
 
@@ -33,7 +25,6 @@ namespace UniConnect
         {
             LoadLogo();
 
-            // Authentication Guard
             if (Session.CurrentAdmin == null)
             {
                 MessageBox.Show("Session expired. Please log in again.",
@@ -45,30 +36,23 @@ namespace UniConnect
 
             Admin me = Session.CurrentAdmin;
 
-            // Sidebar & Top Bar Setup
             lblUserName.Text = me.FullName;
             lblUserId.Text = me.AdminId;
             lblAdminPill.Text = me.Role ?? "Admin";
 
-            // Component Initialization
             SetupSearchPlaceholder();
             StyleGradesGrid();
             ShowSearchPrompt();
 
-            // Initial sidebar refresh
             RefreshRecentChanges();
+            RefreshPendingQueue(); // <-- NEW: Load the pending queue on startup
         }
 
         private void LoadLogo()
         {
-            //
             pbSidebarLogo.Image = Properties.Resources.l2lm;
             pbWatermark.Image = Properties.Resources.l1lm;
         }
-
-        // =====================================================================
-        // SEARCH & FILTERING LOGIC (Mirrors Web Portal)
-        // =====================================================================
 
         private void SetupSearchPlaceholder()
         {
@@ -120,19 +104,16 @@ namespace UniConnect
 
             try
             {
-                _currentStudent = db.FindStudent(query); //
+                _currentStudent = db.FindStudent(query);
 
                 if (_currentStudent != null)
                 {
-                    // Populate Header Details (Mirroring student-info-header on web)
                     lblStudentNameHeader.Text = _currentStudent.FullName;
                     lblStudentIdHeader.Text = $"ID: {_currentStudent.StudentId} | {_currentStudent.Program}";
                     pnlStudentInfo.Visible = true;
 
-                    // Fetch all grades for this student to enable filtering
-                    _currentGrades = db.GetStudentGrades(_currentStudent.StudentId); //
+                    _currentGrades = db.GetStudentGrades(_currentStudent.StudentId);
 
-                    // Populate dynamic Year Filter (Extract years from semester strings like "AY 2025-2026")
                     var years = _currentGrades
                         .Select(g => g.Semester.Split(' ').Last())
                         .Distinct()
@@ -144,7 +125,7 @@ namespace UniConnect
                     foreach (var year in years) cmbYearFilter.Items.Add(year);
 
                     cmbYearFilter.SelectedIndex = 0;
-                    cmbSemFilter.SelectedIndex = 0; // Default to "All Semesters"
+                    cmbSemFilter.SelectedIndex = 0;
 
                     RenderGradesTable();
                 }
@@ -165,13 +146,8 @@ namespace UniConnect
 
         private void Filter_Changed(object sender, EventArgs e)
         {
-            // Re-render the grid whenever a dropdown value changes
             RenderGradesTable();
         }
-
-        // =====================================================================
-        // GRADES TABLE RENDERING & STYLING
-        // =====================================================================
 
         private void StyleGradesGrid()
         {
@@ -189,24 +165,21 @@ namespace UniConnect
 
             dgvGrades.Columns.Clear();
 
-            // Read-only info columns
             dgvGrades.Columns.Add(new DataGridViewTextBoxColumn { Name = "Code", HeaderText = "Code", Width = 65, ReadOnly = true });
             dgvGrades.Columns.Add(new DataGridViewTextBoxColumn { Name = "Subject", HeaderText = "Subject", Width = 210, ReadOnly = true });
             dgvGrades.Columns.Add(new DataGridViewTextBoxColumn { Name = "Units", HeaderText = "Units", Width = 45, ReadOnly = true });
             dgvGrades.Columns.Add(new DataGridViewTextBoxColumn { Name = "Current", HeaderText = "Current", Width = 60, ReadOnly = true });
             dgvGrades.Columns.Add(new DataGridViewTextBoxColumn { Name = "Status", HeaderText = "Status", Width = 75, ReadOnly = true });
 
-            // 1. "New Grade" Input Column (Styled to look like a Textbox)
             var colNew = new DataGridViewTextBoxColumn { Name = "NewGrade", HeaderText = "New Grade", Width = 85 };
             colNew.DefaultCellStyle.BackColor = Color.White;
             colNew.DefaultCellStyle.Padding = new Padding(5);
             dgvGrades.Columns.Add(colNew);
 
-            // 2. Action Column - SAVE (Always visible, matching web portal side)
             var colSave = new DataGridViewButtonColumn
             {
                 Name = "SaveBtn",
-                HeaderText = "Actions", // Label on top
+                HeaderText = "Actions",
                 Text = "Save",
                 UseColumnTextForButtonValue = true,
                 Width = 65,
@@ -216,7 +189,6 @@ namespace UniConnect
             colSave.DefaultCellStyle.ForeColor = Color.White;
             dgvGrades.Columns.Add(colSave);
 
-            // 3. Action Column - REMOVE (Sets back to Pending)
             var colRemove = new DataGridViewButtonColumn
             {
                 Name = "RemoveBtn",
@@ -230,7 +202,6 @@ namespace UniConnect
             colRemove.DefaultCellStyle.ForeColor = Color.FromArgb(220, 38, 38);
             dgvGrades.Columns.Add(colRemove);
 
-            // Hook the cell-click handler
             dgvGrades.CellContentClick -= dgvGrades_CellContentClick;
             dgvGrades.CellContentClick += dgvGrades_CellContentClick;
         }
@@ -244,7 +215,6 @@ namespace UniConnect
             string selYear = cmbYearFilter.SelectedItem?.ToString();
             string selSem = cmbSemFilter.SelectedItem?.ToString();
 
-            // Filtering logic matching web portal's renderGradesTable()
             var filtered = _currentGrades.Where(g => {
                 bool yearMatch = selYear == "All Years" || g.Semester.Contains(selYear);
                 bool semMatch = selSem == "All Semesters" || g.Semester.StartsWith(selSem);
@@ -270,7 +240,6 @@ namespace UniConnect
                     "Remove"
                 );
 
-                // Dynamic Status Coloring
                 var statusCell = dgvGrades.Rows[rowIndex].Cells["Status"];
                 if (g.Status == "Passed") statusCell.Style.ForeColor = Color.FromArgb(34, 139, 34);
                 else if (g.Status == "Failed") statusCell.Style.ForeColor = Color.FromArgb(220, 38, 38);
@@ -279,10 +248,6 @@ namespace UniConnect
 
             dgvGrades.ClearSelection();
         }
-
-        // =====================================================================
-        // BUTTON ACTIONS: SAVE & REMOVE (Mirrors PHP API logic)
-        // =====================================================================
 
         private void dgvGrades_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
@@ -296,7 +261,6 @@ namespace UniConnect
             DatabaseHelper db = new DatabaseHelper();
             string adminId = Session.CurrentAdmin.AdminId;
 
-            // --- HANDLE SAVE ---
             if (colName == "SaveBtn")
             {
                 string input = (row.Cells["NewGrade"].Value ?? "").ToString().Trim();
@@ -305,29 +269,26 @@ namespace UniConnect
                     string status = newGrade <= 3.0m ? "Passed" : "Failed";
                     string log = $"Updated {target.SubjectCode} for {target.StudentId}: {target.GradeValue ?? 0} -> {newGrade}";
 
-                    db.UpdateGradeWithAudit(target.StudentId, target.SubjectCode, newGrade, status, target.Semester, adminId, log); //
+                    db.UpdateGradeWithAudit(target.StudentId, target.SubjectCode, newGrade, status, target.Semester, adminId, log);
                     MessageBox.Show("Grade saved successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    btnSearch_Click(null, null); // Refresh list
+                    btnSearch_Click(null, null);
+                    RefreshPendingQueue(); // <-- REFRESH PENDING AFTER SAVE
                 }
                 else { MessageBox.Show("Enter a valid grade (1.00 to 5.00).", "Invalid Input", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
             }
 
-            // --- HANDLE REMOVE (Set to Pending) ---
             if (colName == "RemoveBtn")
             {
                 if (MessageBox.Show($"Remove grade for {target.SubjectCode}? This will set it to Pending.", "Confirm Removal", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                 {
                     string log = $"Removed grade for {target.SubjectCode} for {target.StudentId} (Was: {target.GradeValue})";
-                    db.UpdateGradeWithAudit(target.StudentId, target.SubjectCode, null, "Pending", target.Semester, adminId, log); //
+                    db.UpdateGradeWithAudit(target.StudentId, target.SubjectCode, null, "Pending", target.Semester, adminId, log);
                     MessageBox.Show("Grade removed and set to Pending.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    btnSearch_Click(null, null); // Refresh list
+                    btnSearch_Click(null, null);
+                    RefreshPendingQueue(); // <-- REFRESH PENDING AFTER REMOVE
                 }
             }
         }
-
-        // =====================================================================
-        // SIDEBAR RECENT CHANGES & NAVIGATION
-        // =====================================================================
 
         private void RefreshRecentChanges()
         {
@@ -336,7 +297,7 @@ namespace UniConnect
             pnlChangesList.AutoScroll = false;
             pnlChangesList.VerticalScroll.Value = 0;
 
-            var logs = db.GetRecentGradeAuditLogs(limit: 10); //
+            var logs = db.GetRecentGradeAuditLogs(limit: 10);
 
             if (!logs.Any())
             {
@@ -366,6 +327,82 @@ namespace UniConnect
             return p;
         }
 
+        // ==========================================
+        // NEW: PENDING QUEUE UI & CLICK LOGIC
+        // ==========================================
+        private void RefreshPendingQueue()
+        {
+            DatabaseHelper db = new DatabaseHelper();
+            pnlPendingList.Controls.Clear();
+            pnlPendingList.AutoScroll = false;
+            pnlPendingList.VerticalScroll.Value = 0;
+
+            var pendingStudents = db.GetPendingStudents();
+
+            if (!pendingStudents.Any())
+            {
+                var lblEmpty = new Label
+                {
+                    Text = "🎉 All caught up!\nNo pending tasks.",
+                    ForeColor = Color.FromArgb(16, 185, 129),
+                    Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                    Dock = DockStyle.Fill,
+                    TextAlign = ContentAlignment.MiddleCenter
+                };
+                pnlPendingList.Controls.Add(lblEmpty);
+                return;
+            }
+
+            int y = 0;
+            int width = pnlPendingList.Width - 5;
+            foreach (var student in pendingStudents)
+            {
+                Panel p = new Panel
+                {
+                    Location = new Point(0, y),
+                    Size = new Size(width, 62),
+                    BackColor = Color.FromArgb(255, 251, 235), // Warning Yellow
+                    Cursor = Cursors.Hand
+                };
+                p.Tag = student.studentId;
+
+                // Border accent
+                p.Controls.Add(new Panel { BackColor = Color.FromArgb(245, 158, 11), Location = new Point(0, 0), Size = new Size(4, 62) });
+
+                p.Controls.Add(new Label { Text = student.fullName, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold), ForeColor = Color.FromArgb(146, 64, 14), Location = new Point(10, 5), Size = new Size(width - 15, 16), AutoEllipsis = true });
+                p.Controls.Add(new Label { Text = "ID: " + student.studentId, Font = new Font("Segoe UI", 7.5F), ForeColor = Color.FromArgb(180, 83, 9), Location = new Point(10, 23), Size = new Size(width - 15, 14) });
+                p.Controls.Add(new Label { Text = $"⚠️ {student.pendingCount} Subject(s) Pending", Font = new Font("Segoe UI", 7.5F, FontStyle.Bold), ForeColor = Color.FromArgb(217, 119, 6), Location = new Point(10, 42), Size = new Size(width - 15, 14) });
+
+                // Add click handler to the entire card
+                p.Click += PendingItem_Click;
+                foreach (Control c in p.Controls) c.Click += (s, ev) => PendingItem_Click(p, ev);
+
+                pnlPendingList.Controls.Add(p);
+                y += p.Height + 6;
+            }
+
+            pnlPendingList.AutoScroll = true; // Automatically activates scrollbar if list exceeds panel height
+        }
+
+        private void PendingItem_Click(object sender, EventArgs e)
+        {
+            // Clear placeholder if it's currently showing
+            if (_searchPlaceholderShown)
+            {
+                txtSearch.Text = "";
+                txtSearch.ForeColor = Color.FromArgb(33, 33, 33);
+                _searchPlaceholderShown = false;
+            }
+
+            // Fill Search box and trigger the search button
+            Panel p = sender as Panel;
+            if (p != null && p.Tag != null)
+            {
+                txtSearch.Text = p.Tag.ToString();
+                btnSearch_Click(null, null);
+            }
+        }
+
         private string HumanizeTimeAgo(DateTime when)
         {
             TimeSpan diff = DateTime.Now - when;
@@ -384,13 +421,9 @@ namespace UniConnect
 
         private void RemoveSearchPrompt() { foreach (var c in pnlGrades.Controls.Find("lblPrompt", false)) pnlGrades.Controls.Remove(c); }
 
-        // =====================================================================
-        // NAVIGATION & LOGOUT
-        // =====================================================================
-
         private void btnNavDashboard_Click(object sender, EventArgs e) { new frmAdminDashboard().Show(); this.Close(); }
         private void btnNavStudents_Click(object sender, EventArgs e) { MessageBox.Show("Manage Students module coming soon."); }
-        private void btnNavEncodeGrades_Click(object sender, EventArgs e) { /* Already here */ }
+        private void btnNavEncodeGrades_Click(object sender, EventArgs e) { }
         private void btnNavEnrollments_Click(object sender, EventArgs e) { MessageBox.Show("Manage Enrollments module coming soon."); }
         private void btnNavPostAnnouncement_Click(object sender, EventArgs e) { new frmPostAnnouncement().Show(); this.Close(); }
         private void btnNavReports_Click(object sender, EventArgs e) { MessageBox.Show("Reports module coming soon."); }
@@ -404,7 +437,7 @@ namespace UniConnect
 
         private void PerformLogout()
         {
-            Session.Clear(); //
+            Session.Clear();
             new frmAdminLogin().Show();
             this.Close();
         }
