@@ -27,6 +27,7 @@ UniConnect/
 │   ├── 01_create_database.sql
 │   ├── 02_create_tables.sql
 │   ├── 03_seed_data.sql
+│   ├── 04_announcement_reads.sql
 ├── Properties/
 ├── Resources/              Logos
 ├── App.config              Connection string config
@@ -72,6 +73,8 @@ To get this project running on your local machine, you need the "engine" to run 
         02_create_tables.sql
 
         03_seed_data.sql
+
+        04_announcement_reads.sql
 
 
 3. Configure the connection
